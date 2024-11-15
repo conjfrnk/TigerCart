@@ -131,9 +131,8 @@ def authenticate():
             "INSERT INTO users (name) VALUES (?)", (username,)
         )
         conn.commit()
-        user_id = cursor.lastrowid
-    else:
-        user_id = user["user_id"]
+    
+    user_id = username
 
     conn.close()
 

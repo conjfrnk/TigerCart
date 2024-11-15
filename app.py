@@ -51,7 +51,9 @@ def home():
 
     cursor.execute("INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
                    (session["user_id"], username))
-
+    
+    conn.commit()
+    conn.close()
 
     return render_template("home.html", username=username)
 
@@ -70,6 +72,7 @@ def settings():
             (venmo_handle, user_id),
         )
         conn.commit()
+        conn.close()
         flash("Venmo handle updated successfully.")
         return redirect(url_for("settings"))
     user = cursor.execute(
@@ -790,4 +793,4 @@ def order_details(order_id):
 
 if __name__ == "__main__":
     init_user_db()
-    app.run(port=8000, debug=get_debug_mode())
+    app.run(host="localhost", port=8000, debug=get_debug_mode())
