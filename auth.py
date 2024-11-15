@@ -30,7 +30,8 @@ import ssl
 
 auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
-context = ssl._create_unverified_context()
+USERNAME = None
+
 # -----------------------------------------------------------------------
 
 # Return url after stripping out the "ticket" parameter that was
@@ -63,6 +64,9 @@ def validate(ticket):
         + urllib.parse.quote(ticket)
     )
     lines = []
+
+    context = ssl._create_unverified_context()
+
     with urllib.request.urlopen(val_url, context=context) as flo:
         lines = flo.readlines()  # Should return 2 lines.
     if len(lines) != 2:
@@ -127,9 +131,8 @@ def authenticate():
             "INSERT INTO users (name) VALUES (?)", (username,)
         )
         conn.commit()
-        user_id = cursor.lastrowid
-    else:
-        user_id = user["user_id"]
+    
+    user_id = username
 
     conn.close()
 

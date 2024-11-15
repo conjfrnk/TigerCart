@@ -42,16 +42,27 @@ DELIVERY_FEE_PERCENTAGE = 0.1
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
 def home():
-    """Redirects to login if the user is not logged in, else shows home page."""
+    """Shows home page."""
     username = auth.authenticate()
-    return render_template("home.html", username=username,)
+    session["user_id"] = username
+
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
+                   (session["user_id"], username))
+    
+    conn.commit()
+    conn.close()
+
+    return render_template("home.html", username=username)
 
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     username = auth.authenticate()
     """Settings page where user can update their Venmo handle."""
-    user_id = session["user_id"]
+    user_id = auth.authenticate()
     conn = get_user_db_connection()
     cursor = conn.cursor()
     if request.method == "POST":
@@ -61,6 +72,7 @@ def settings():
             (venmo_handle, user_id),
         )
         conn.commit()
+        conn.close()
         flash("Venmo handle updated successfully.")
         return redirect(url_for("settings"))
     user = cursor.execute(
@@ -631,10 +643,9 @@ def profile():
 
     return render_template(
         "profile.html",
-        user=user_data,
-        orders=orders_with_totals,
-        stats=stats,
         username=username,
+        orders=orders_with_totals,
+        stats=stats
     )
 
 
@@ -782,4 +793,4 @@ def order_details(order_id):
 
 if __name__ == "__main__":
     init_user_db()
-    app.run(port=8000, debug=get_debug_mode())
+    app.run(host="localhost", port=8000, debug=get_debug_mode())

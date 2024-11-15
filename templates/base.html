@@ -51,11 +51,6 @@
             gap: 10px;
         }
 
-        .user-name {
-            font-weight: bold;
-            color: #333;
-        }
-
         .profile {
             position: relative;
             cursor: pointer;
@@ -241,9 +236,8 @@
         </a>
     {% endif %}
 
-    <!-- Top-right logo and profile menu with user's name -->
+    <!-- Top-right logo and profile menu -->
     <div class="top-right">
-        <div class="user-name">{{ username }}</div>
         <div class="profile" onclick="toggleDropdown()">
             <i class="fas fa-user-circle profile-icon"></i>
             <div class="dropdown">
