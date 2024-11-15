@@ -32,15 +32,24 @@ DELIVERY_FEE_PERCENTAGE = 0.1
 @app.route('/', methods=['GET'])
 @app.route('/index', methods=['GET'])
 def home():
-    """Redirects to login if the user is not logged in, else shows home page."""
+    """Shows home page."""
     username = auth.authenticate()
+    session["user_id"] = username
+
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
+                   (session["user_id"], username))
+
+
     return render_template("home.html", username=username)
 
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     """Settings page where user can update their Venmo handle."""
-    user_id = session["user_id"]
+    user_id = auth.authenticate()
     conn = get_user_db_connection()
     cursor = conn.cursor()
     if request.method == "POST":
@@ -58,7 +67,7 @@ def settings():
     conn.close()
     return render_template(
         "settings.html",
-        venmo_handle=user["venmo_handle"] if user else "",
+        venmo_handle=user["venmo_handle"] if user else ""
     )
 
 
@@ -386,6 +395,7 @@ def delivery_timeline(delivery_id):
 @app.route("/profile")
 def profile():
     """Displays the user's profile, order history, and statistics."""
+    username=auth.authenticate()
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -407,7 +417,7 @@ def profile():
 
     return render_template(
         "profile.html",
-        user=user_data,
+        username=username,
         orders=orders_with_totals,
         stats=stats,
     )

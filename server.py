@@ -4,8 +4,9 @@ server.py
 Serves data for the TigerCart app.
 """
 
+import auth
 import json
-from flask import Flask, jsonify, request
+from flask import (Flask, jsonify, request)
 from config import get_debug_mode, SECRET_KEY
 from database import get_main_db_connection, get_user_db_connection
 

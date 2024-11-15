@@ -47,7 +47,7 @@ def init_main_db():
             status TEXT CHECK(status IN
             ('placed', 'claimed', 'fulfilled', 'declined', 'cancelled')),
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            user_id INTEGER,
+            user_id TEXT,
             total_items INTEGER,
             cart TEXT,
             location TEXT,
@@ -70,7 +70,7 @@ def init_user_db():
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
+            user_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             venmo_handle TEXT,
             cart TEXT DEFAULT '{}'
@@ -81,7 +81,7 @@ def init_user_db():
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS favorites (
-            user_id INTEGER,
+            user_id TEXT,
             item_id INTEGER,
             PRIMARY KEY (user_id, item_id),
             FOREIGN KEY (user_id) REFERENCES users(user_id),
@@ -130,29 +130,24 @@ def populate_items():
     conn.close()
 
 
-def populate_users():
-    """Populates the users table with initial users."""
-    conn = get_user_db_connection()
-    cursor = conn.cursor()
+# def populate_users():
+#     """Populates the users table with initial users."""
+#     conn = get_user_db_connection()
+#     cursor = conn.cursor()
 
-    users = [
-        (1, "Connor"),
-        (2, "Jacob"),
-        (3, "Alex"),
-        (4, "Matt"),
-        (5, "Okezie"),
-    ]
-    cursor.executemany(
-        "INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
-        users,
-    )
+#     users = []
 
-    conn.commit()
-    conn.close()
+#     cursor.executemany(
+#         "INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
+#         users,
+#     )
+
+#     conn.commit()
+#     conn.close()
 
 
 if __name__ == "__main__":
     init_main_db()
     init_user_db()
     populate_items()
-    populate_users()
+    # populate_users()

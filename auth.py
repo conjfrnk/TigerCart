@@ -10,12 +10,14 @@ import urllib.request
 import urllib.parse
 import re
 import flask
+import ssl
 
 from top import app
 
 # -----------------------------------------------------------------------
 
 _CAS_URL = "https://fed.princeton.edu/cas/"
+USERNAME = None
 
 # -----------------------------------------------------------------------
 
@@ -49,7 +51,10 @@ def validate(ticket):
         + urllib.parse.quote(ticket)
     )
     lines = []
-    with urllib.request.urlopen(val_url) as flo:
+
+    context = ssl._create_unverified_context()
+
+    with urllib.request.urlopen(val_url, context=context) as flo:
         lines = flo.readlines()  # Should return 2 lines.
     if len(lines) != 2:
         return None
@@ -99,6 +104,7 @@ def authenticate():
     # the session.
     username = username.strip()
     flask.session["username"] = username
+    USERNAME = username
     return username
 
 
