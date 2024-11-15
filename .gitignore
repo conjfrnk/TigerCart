@@ -1,3 +1,5 @@
+*.sqlite3
+
 # Virtualenv
 tigercart_env
 

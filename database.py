@@ -108,7 +108,7 @@ def populate_items():
             "category": "drinks",
         },
         "4": {
-            "name": "Lay’s Potato Chips",
+            "name": "Lay's Potato Chips",
             "price": 1.59,
             "category": "food",
         },

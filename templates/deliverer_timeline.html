@@ -1,8 +1,18 @@
+<!-- templates/deliverer_timeline.html -->
+
 {% extends "base.html" %}
 {% block title %}Delivery Timeline{% endblock %}
-
 {% block content %}
-<h1>Delivery Timeline</h1>
+<h1>Delivery Timeline for Order {{ order['id'] }}</h1>
+
+<hr color="#ff5722">
+
+<h2><u>Logistics</u></h2>
+<p><strong>Delivery Location:</strong> {{ order['location'] }}</p>
+<p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
+<p><strong>User ID:</strong> {{ order['user_id'] }}</p>
+<p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
+<p><strong>Shopper Venmo:</strong> {{ shopper_venmo }}</p>
 
 <hr color="#ff5722">
 
@@ -13,18 +23,13 @@
             <tr>
                 <td style="border: 1px solid black;"><strong>Item</strong></td>
                 <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-                <td style="border: 1px solid black;"><strong>Collected</strong></td>
             </tr>
         </thead>
         <tbody style="border: 1px solid black;">
-            {% for item_id, item in items.items() %}
+            {% for item_id, item in order['cart'].items() %}
             <tr>
-                <td style="border: 1px solid black;">{{ item.name }}</td>
-                <td style="border: 1px solid black;">{{ item.quantity }}</td>
-                <td style="border: 1px solid black;">
-                    <input type="checkbox" onclick="updateChecklist('item', '{{ item_id }}', this.checked)"
-                           {% if item.checked %}checked{% endif %}>
-                </td>
+                <td style="border: 1px solid black;">{{ item['name'] }}</td>
+                <td style="border: 1px solid black;">{{ item['quantity'] }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -35,35 +40,50 @@
 
 <h2><u>Timeline</u></h2>
 <div class="timeline">
-    {% set steps = ['Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+    {% set steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
+    {% set step_index = loop.index0 %}
+    {% set previous_step_completed = step_index == 0 or order['timeline'].get(steps[step_index - 1], False) %}
     <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
-        <input type="checkbox" onclick="updateChecklist('timeline', '{{ step|lower|replace(' ', '_') }}', this.checked)"
-               {% if step in timeline and timeline[step] %}checked{% endif %}>
+        <input type="checkbox"
+               data-step="{{ step }}"
+               onclick="updateChecklist('{{ step }}', this.checked)" 
+               {% if not previous_step_completed %}disabled{% endif %}
+               {% if order['timeline'].get(step, False) %}checked{% endif %}>
         <span class="step-text">{{ step }}</span>
     </div>
     {% endfor %}
 </div>
 
 <script>
-    function updateChecklist(type, id, checked) {
-        fetch(`/update_checklist`, {
+    function updateChecklist(step, checked) {
+        fetch('/update_checklist', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                order_id: "{{ order.id }}",
-                type: type,
-                id: id,
+                order_id: "{{ order['id'] }}",
+                step: step,
                 checked: checked
             })
         }).then(response => response.json())
           .then(data => {
               if (!data.success) {
-                  alert("Failed to update the checklist.");
+                  alert(data.error || "Failed to update the checklist.");
+                  // Revert the checkbox state
+                  const checkbox = document.querySelector(`input[data-step="${step}"]`);
+                  if (checkbox) {
+                      checkbox.checked = !checked;
+                  }
+              } else {
+                  // Reload the page to update the disabled state of checkboxes
+                  location.reload();
               }
-          }).catch(error => console.error("Error updating checklist:", error));
+          }).catch(error => {
+              console.error("Error updating checklist:", error);
+              alert("An error occurred while updating the checklist.");
+          });
     }
 </script>
 {% endblock %}

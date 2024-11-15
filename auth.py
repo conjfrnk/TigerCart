@@ -11,14 +11,27 @@ import urllib.parse
 import re
 import flask
 import ssl
-
 from top import app
+from flask import (
+    Blueprint,
+    session,
+    redirect,
+    render_template,
+    request,
+    abort,
+)
+from database import get_user_db_connection
+import urllib.request
+import urllib.parse
+import re
+import ssl
 
 # -----------------------------------------------------------------------
 
+auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
 USERNAME = None
-
+context = ssl._create_unverified_context()
 # -----------------------------------------------------------------------
 
 # Return url after stripping out the "ticket" parameter that was
@@ -72,9 +85,9 @@ def validate(ticket):
 
 
 def authenticate():
-    """see above for fxn definition"""
+    """Authenticate the remote user, and return the user's username."""
     # If the username is in the session, then the user was
-    # authenticated previously.  So return the username.
+    # authenticated previously. So return the username.
     if "username" in flask.session:
         return flask.session.get("username")
 
@@ -100,39 +113,53 @@ def authenticate():
         )
         flask.abort(flask.redirect(login_url))
 
-    # The user is authenticated, so store the username in
-    # the session.
+    # The user is authenticated, so store the username in the session.
     username = username.strip()
     flask.session["username"] = username
-    USERNAME = username
+
+    # Now, retrieve or create the user_id in the database
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    user = cursor.execute(
+        "SELECT user_id FROM users WHERE name = ?", (username,)
+    ).fetchone()
+
+    if user is None:
+        # User does not exist, create a new user
+        cursor.execute(
+            "INSERT INTO users (name) VALUES (?)", (username,)
+        )
+        conn.commit()
+        user_id = cursor.lastrowid
+    else:
+        user_id = user["user_id"]
+
+    conn.close()
+
+    # Store user_id in the session
+    flask.session["user_id"] = user_id
+
     return username
 
 
 # -----------------------------------------------------------------------
 
 
-@app.route("/logoutapp", methods=["GET"])
+@auth_bp.route("/logoutapp", methods=["GET"])
 def logoutapp():
-    """log out of the application"""
-    # Log out of the application.
-    flask.session.clear()
-    html_code = flask.render_template("loggedout.html")
-    response = flask.make_response(html_code)
-    return response
+    """Log out of the application."""
+    session.clear()
+    return render_template("loggedout.html")
 
 
 # -----------------------------------------------------------------------
 
 
-@app.route("/logoutcas", methods=["GET"])
+# auth.py
+@auth_bp.route("/logoutcas", methods=["GET"])
 def logoutcas():
-    """logout of cas"""
-    # Log out of the CAS session, and then the application.
-    logout_url = (
-        _CAS_URL
-        + "logout?service="
-        + urllib.parse.quote(
-            re.sub("logoutcas", "logoutapp", flask.request.url)
-        )
-    )
-    flask.abort(flask.redirect(logout_url))
+    """Log out of the CAS session."""
+    session.clear()
+    logout_url = _CAS_URL + "logout"
+    return redirect(logout_url)

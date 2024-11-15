@@ -23,14 +23,16 @@
 - [ ] Real items, not placeholders
 - [ ] Live U-Store data
 - [X] Database of users
-- [ ] Real users, not placeholders (use netID from CAS)
+- [X] Real users, not placeholders (use netID from CAS)
 - [X] Princeton CAS Authentication
 - [X] Edge cases (if item not found)
-- [ ] Settings page
+- [X] Settings page
 - [ ] Mobile-first category ribbon with population
 - [ ] User favorite items
 - [ ] Deliverer hide "declined" orders
-- [ ] Connect timeline
+- [X] Connect timeline
+- [ ] Improve efficiency (pages should not need to be refreshed to see changes)
+- [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
 ## Alpha
 

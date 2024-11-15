@@ -1,0 +1,12 @@
+<!-- templates/public_home.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Welcome to TigerCart{% endblock %}
+
+{% block content %}
+    <h1>Welcome to TigerCart!</h1>
+    <p>Your one-stop shop for all your needs.</p>
+    <a href="{{ url_for('auth.login') }}">Login</a>
+    <a href="{{ url_for('shop') }}">Shop Now</a>
+{% endblock %}

@@ -1,30 +1,62 @@
 {% extends "base.html" %}
-{% block title %}Available Deliveries - TigerCart{% endblock %}
+{% block title %}Deliver - TigerCart{% endblock %}
 
 {% block content %}
-<h1>Available Deliveries</h1>
-<ul>
-    <table style="border: 1px solid black; border-collapse: collapse;" align="center">
-        <thead style="border: 1px solid black;">
-            <tr>
-                <td style="border: 1px solid black;"><strong>Item Quantity</strong></td>
-                <td style="border: 1px solid black;"><strong>Shopper Name</strong></td>
-                <td style="border: 1px solid black;"><strong>Delivery Location</strong></td>
-                <td style="border: 1px solid black;"><strong>Earnings ($)</strong></td>
-                <td style="border: 1px solid black;"><strong>More Details</strong></td>
-            </tr>
-        </thead>
-        <tbody style="border: 1px solid black;">
-            {% for delivery in deliveries %}
-            <tr>
-                <td style="border: 1px solid black;">{{delivery.total_items}}</td>
-                <td style="border: 1px solid black;">{{delivery.user_name}}</td>
-                <td style="border: 1px solid black;">{{delivery.location}}</td>
-                <td style="border: 1px solid black;">{{"%.2f"|format(delivery.earnings)}}</td>
-                <td style="border: 1px solid black;"><a href="{{ url_for('delivery_details', delivery_id=delivery.id) }}">See More</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</ul>
+    <h1>Available Deliveries</h1>
+    {% if available_deliveries %}
+        <table style="border: 1px solid black; border-collapse: collapse;" align="center">
+            <thead style="border: 1px solid black;">
+                <tr>
+                    <td style="border: 1px solid black;"><strong>Item Quantity</strong></td>
+                    <td style="border: 1px solid black;"><strong>Shopper ID</strong></td>
+                    <td style="border: 1px solid black;"><strong>Delivery Location</strong></td>
+                    <td style="border: 1px solid black;"><strong>Earnings ($)</strong></td>
+                    <td style="border: 1px solid black;"><strong>More Details</strong></td>
+                </tr>
+            </thead>
+            <tbody style="border: 1px solid black;">
+                {% for delivery in available_deliveries %}
+                <tr>
+                    <td style="border: 1px solid black;">{{ delivery['total_items'] }}</td>
+                    <td style="border: 1px solid black;">{{ delivery['user_id'] }}</td>
+                    <td style="border: 1px solid black;">{{ delivery['location'] }}</td>
+                    <td style="border: 1px solid black;">{{ "%.2f"|format(delivery['earnings']) }}</td>
+                    <td style="border: 1px solid black;">
+                        <a href="{{ url_for('delivery_details', delivery_id=delivery['id']) }}">See More</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No available deliveries at the moment.</p>
+    {% endif %}
+
+    {% if my_deliveries %}
+        <h2>Your Deliveries</h2>
+        <table style="border: 1px solid black; border-collapse: collapse;" align="center">
+            <thead style="border: 1px solid black;">
+                <tr>
+                    <td style="border: 1px solid black;"><strong>Item Quantity</strong></td>
+                    <td style="border: 1px solid black;"><strong>Shopper ID</strong></td>
+                    <td style="border: 1px solid black;"><strong>Delivery Location</strong></td>
+                    <td style="border: 1px solid black;"><strong>Earnings ($)</strong></td>
+                    <td style="border: 1px solid black;"><strong>View Timeline</strong></td>
+                </tr>
+            </thead>
+            <tbody style="border: 1px solid black;">
+                {% for delivery in my_deliveries %}
+                <tr>
+                    <td style="border: 1px solid black;">{{ delivery['total_items'] }}</td>
+                    <td style="border: 1px solid black;">{{ delivery['user_id'] }}</td>
+                    <td style="border: 1px solid black;">{{ delivery['location'] }}</td>
+                    <td style="border: 1px solid black;">{{ "%.2f"|format(delivery['earnings']) }}</td>
+                    <td style="border: 1px solid black;">
+                        <a href="{{ url_for('delivery_timeline', delivery_id=delivery['id']) }}">View Timeline</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 {% endblock %}

@@ -17,11 +17,21 @@ from flask import (
     flash,
 )
 from config import get_debug_mode, SECRET_KEY
-from database import get_main_db_connection, get_user_db_connection
+from database import (
+    get_main_db_connection,
+    get_user_db_connection,
+    init_user_db,
+)
 import auth
+
+# Import and register the auth Blueprint
+from auth import auth_bp
+
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+app.register_blueprint(auth_bp)
+
 
 SERVER_URL = "http://localhost:5150"
 REQUEST_TIMEOUT = 5
@@ -29,8 +39,8 @@ DELIVERY_FEE_PERCENTAGE = 0.1
 
 
 # Root route
-@app.route('/', methods=['GET'])
-@app.route('/index', methods=['GET'])
+@app.route("/", methods=["GET"])
+@app.route("/index", methods=["GET"])
 def home():
     """Shows home page."""
     username = auth.authenticate()
@@ -48,6 +58,7 @@ def home():
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
+    username = auth.authenticate()
     """Settings page where user can update their Venmo handle."""
     user_id = auth.authenticate()
     conn = get_user_db_connection()
@@ -67,23 +78,102 @@ def settings():
     conn.close()
     return render_template(
         "settings.html",
-        venmo_handle=user["venmo_handle"] if user else ""
+        venmo_handle=user["venmo_handle"] if user else "",
+        username=username,
     )
 
 
 @app.route("/shop")
 def shop():
-    """Displays items available in the shop."""
+    """Displays items available in the shop and current order if any."""
+    username = auth.authenticate()
     response = requests.get(
         f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
     )
     sample_items = response.json()
-    return render_template("shop.html", items=sample_items)
+
+    # Check if the user is logged in
+    user_id = session.get("user_id")
+    current_order = None
+
+    if user_id:
+        conn = get_main_db_connection()
+        cursor = conn.cursor()
+
+        # Fetch the user's current order (status 'placed' or 'claimed')
+        cursor.execute(
+            "SELECT * FROM orders WHERE user_id = ? AND status IN ('placed', 'claimed') ORDER BY timestamp DESC LIMIT 1",
+            (user_id,),
+        )
+        current_order = cursor.fetchone()
+        conn.close()
+    else:
+        # If not logged in, redirect to login or home page
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "shop.html", items=sample_items, current_order=current_order,
+        username=username,
+    )
+
+
+@app.route("/shopper_timeline")
+def shopper_timeline():
+    """Displays the shopper's order timeline."""
+    username = auth.authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("home"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    # Retrieve the most recent order for this user
+    cursor.execute(
+        "SELECT * FROM orders WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1",
+        (user_id,),
+    )
+    order = cursor.fetchone()
+
+    # Get the deliverer's Venmo handle from the database
+    deliverer_venmo = None
+    if order and order["claimed_by"]:
+
+        user_conn = get_user_db_connection()
+        user_cursor = user_conn.cursor()
+        user_cursor.execute(
+            "SELECT venmo_handle FROM users WHERE user_id = ?",
+            (order["claimed_by"],),
+        )
+        deliverer = user_cursor.fetchone()
+        if deliverer:
+            deliverer_venmo = deliverer["venmo_handle"]
+        user_conn.close()
+
+    conn.close()
+
+    if not order:
+        return "No orders found."
+
+    # Convert SQLite Row object to a dictionary
+    order_dict = dict(order)
+    order_dict["timeline"] = json.loads(
+        order_dict.get("timeline", "{}")
+    )
+    order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
+
+    return render_template(
+        "shopper_timeline.html",
+        order=order_dict,
+        deliverer_venmo=deliverer_venmo,
+        username=username,
+    )
 
 
 @app.route("/category_view/<category>")
 def category_view(category):
     """Displays items in a specific category."""
+    username = auth.authenticate()
     response = requests.get(
         f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
     )
@@ -94,13 +184,20 @@ def category_view(category):
         if v.get("category") == category
     }
     return render_template(
-        "category_view.html", category=category, items=items_in_category
+        "category_view.html", category=category, items=items_in_category,
+        username=username,
     )
 
 
 @app.route("/cart_view")
 def cart_view():
     """Displays the cart view with item subtotals and total cost."""
+    username = auth.authenticate()
+    if "user_id" not in session:
+        # Redirect to login or home page if user_id is not in session
+        return redirect(url_for("home"))
+
+    # Proceed with your existing code
     items_response = requests.get(
         f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
     )
@@ -129,6 +226,7 @@ def cart_view():
         subtotal=subtotal,
         delivery_fee=delivery_fee,
         total=total,
+        username=username,
     )
 
 
@@ -208,9 +306,27 @@ def update_cart(item_id, action):
     return jsonify({"success": True})
 
 
+@app.route("/order_status/<int:order_id>")
+def order_status(order_id):
+    """Returns the timeline status of an order in JSON format."""
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT timeline FROM orders WHERE id = ?", (order_id,)
+    )
+    order = cursor.fetchone()
+    conn.close()
+    if not order:
+        return jsonify({"error": "Order not found."}), 404
+
+    timeline = json.loads(order["timeline"])
+    return jsonify({"timeline": timeline})
+
+
 @app.route("/order_confirmation")
 def order_confirmation():
     """Displays the order confirmation page with items in cart."""
+    username = auth.authenticate()
     response = requests.get(
         f"{SERVER_URL}/cart",
         json={"user_id": session["user_id"]},
@@ -218,7 +334,8 @@ def order_confirmation():
     )
     items_in_cart = len(response.json())
     return render_template(
-        "order_confirmation.html", items_in_cart=items_in_cart
+        "order_confirmation.html", items_in_cart=items_in_cart,
+        username=username,
     )
 
 
@@ -256,16 +373,25 @@ def place_order():
     total_items = sum(details["quantity"] for details in cart.values())
     conn = get_main_db_connection()
     cursor = conn.cursor()
+    # Initialize the timeline
+    timeline = {
+        "Shopping in U-Store": False,
+        "Checked Out": False,
+        "On Delivery": False,
+        "Delivered": False,
+    }
+
     cursor.execute(
         """INSERT INTO orders
-        (status, user_id, total_items, cart, location)
-        VALUES (?, ?, ?, ?, ?)""",
+        (status, user_id, total_items, cart, location, timeline)
+        VALUES (?, ?, ?, ?, ?, ?)""",
         (
             "placed",
             user_id,
             total_items,
             json.dumps(cart),
             delivery_location,
+            json.dumps(timeline),
         ),
     )
 
@@ -277,52 +403,96 @@ def place_order():
     conn.close()
     user_conn.close()
 
-    return redirect(url_for("home"))
+    return jsonify({"success": True}), 200
 
 
-# Delivery management routes
 @app.route("/deliver")
 def deliver():
-    """Displays all deliveries available for claiming."""
-    deliverer_id = session.get("user_id")
-    response = requests.get(
-        f"{SERVER_URL}/deliveries",
-        json={"user_id": deliverer_id},
-        timeout=REQUEST_TIMEOUT,
+    """Displays available deliveries for deliverers."""
+    username = auth.authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("home"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch available deliveries (status 'placed')
+    cursor.execute("SELECT * FROM orders WHERE status = 'placed'")
+    available_deliveries = cursor.fetchall()
+
+    # Fetch deliverer's own deliveries (status 'claimed' and claimed_by = user_id)
+    cursor.execute(
+        "SELECT * FROM orders WHERE status = 'claimed' AND claimed_by = ?",
+        (user_id,),
     )
-    deliveries = response.json()
+    my_deliveries = cursor.fetchall()
+
+    # Convert SQLite Row objects to dictionaries and calculate earnings
+    available_deliveries = [
+        dict(delivery) for delivery in available_deliveries
+    ]
+    my_deliveries = [dict(delivery) for delivery in my_deliveries]
+
+    for delivery in available_deliveries + my_deliveries:
+        # Calculate earnings
+        cart = json.loads(delivery["cart"])
+        subtotal = sum(
+            item["quantity"] * item["price"] for item in cart.values()
+        )
+        delivery["earnings"] = round(
+            subtotal * DELIVERY_FEE_PERCENTAGE, 2
+        )
+
+    conn.close()
+
     return render_template(
-        "deliver.html", deliveries=deliveries.values()
+        "deliver.html",
+        available_deliveries=available_deliveries,
+        my_deliveries=my_deliveries,
+        username=username,
     )
 
 
 @app.route("/delivery/<delivery_id>")
 def delivery_details(delivery_id):
     """Displays details of a specific delivery."""
+    username = auth.authenticate()
     response = requests.get(
         f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
     )
     if response.status_code == 200:
         delivery = response.json()
         return render_template(
-            "delivery_details.html", delivery=delivery
+            "delivery_details.html", delivery=delivery,
+            username=username,
         )
     return "Delivery not found", 404
 
 
-@app.route("/accept_delivery/<delivery_id>", methods=["POST"])
+@app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
-    """Accepts a delivery by forwarding the request to the backend server."""
-    response = requests.post(
-        f"{SERVER_URL}/accept_delivery/{delivery_id}",
-        json={"user_id": session.get("user_id")},
-        timeout=REQUEST_TIMEOUT,
+    """Marks the delivery as accepted by changing its status."""
+    username = auth.authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    # Update the order status to 'claimed' and set 'claimed_by' to the current user
+    cursor.execute(
+        "UPDATE orders SET status = 'claimed', claimed_by = ? WHERE id = ?",
+        (user_id, delivery_id),
     )
-    if response.status_code == 200:
-        return redirect(
-            url_for("delivery_timeline", delivery_id=delivery_id)
-        )
-    return "Error accepting delivery", response.status_code
+    conn.commit()
+    conn.close()
+
+    # Redirect to the delivery timeline
+    return redirect(
+        url_for("delivery_timeline", delivery_id=delivery_id, username=username)
+    )
 
 
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
@@ -337,21 +507,31 @@ def decline_delivery(delivery_id):
     return "Error declining delivery", response.status_code
 
 
-# Timeline and checklist routes
 @app.route("/update_checklist", methods=["POST"])
 def update_checklist():
-    """Updates the checklist for items and timeline steps in the delivery."""
-    data = request.json
+    """Updates the order's timeline based on deliverer's actions."""
+    data = request.get_json()
     order_id = data.get("order_id")
-    item_type = data.get("type")  # 'item' or 'timeline'
-    item_id = data.get("id")
+    step = data.get("step")
     checked = data.get("checked")
+
+    # Ensure that the deliverer is authorized to update this order
+    user_id = session.get("user_id")
+    if not user_id:
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     conn = get_main_db_connection()
     cursor = conn.cursor()
-    order = cursor.execute(
-        "SELECT timeline FROM orders WHERE id = ?", (order_id,)
-    ).fetchone()
+
+    # Retrieve the order
+    cursor.execute(
+        "SELECT timeline, claimed_by FROM orders WHERE id = ?",
+        (order_id,),
+    )
+    order = cursor.fetchone()
 
     if not order:
         conn.close()
@@ -360,42 +540,82 @@ def update_checklist():
             404,
         )
 
-    timeline = json.loads(order["timeline"])
-    if item_type == "item":
-        timeline["items"][item_id] = checked
-    else:
-        timeline[item_id] = checked
+    if order["claimed_by"] != user_id:
+        conn.close()
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Not authorized to update this order",
+                }
+            ),
+            403,
+        )
 
+    # Load the existing timeline
+    timeline = json.loads(order["timeline"])
+
+    # Enforce sequential steps
+    steps = [
+        "Venmo Payment Recieved",
+        "Shopping in U-Store",
+        "Checked Out",
+        "On Delivery",
+        "Delivered",
+    ]
+    step_index = steps.index(step)
+
+    # Check if previous steps are completed
+    if checked:
+        if step_index > 0:
+            previous_step = steps[step_index - 1]
+            if not timeline.get(previous_step, False):
+                conn.close()
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": f'Previous step "{previous_step}" must be completed first.',
+                        }
+                    ),
+                    400,
+                )
+    else:
+        # Prevent unchecking a step if subsequent steps are completed
+        if any(
+            timeline.get(steps[i], False)
+            for i in range(step_index + 1, len(steps))
+        ):
+            conn.close()
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Cannot uncheck this step because subsequent steps are completed.",
+                    }
+                ),
+                400,
+            )
+
+    # Update the timeline
+    timeline[step] = checked
+
+    # Update the database
     cursor.execute(
         "UPDATE orders SET timeline = ? WHERE id = ?",
         (json.dumps(timeline), order_id),
     )
     conn.commit()
     conn.close()
-    return jsonify({"success": True})
 
-
-@app.route("/delivery_timeline/<delivery_id>")
-def delivery_timeline(delivery_id):
-    """Displays a timeline for the accepted delivery."""
-    response = requests.get(
-        f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
-    )
-    if response.status_code == 200:
-        delivery = response.json()
-        return render_template(
-            "deliverer_timeline.html",
-            delivery=delivery,
-            items=delivery["cart"],
-        )
-    return "Delivery not found", 404
+    return jsonify({"success": True}), 200
 
 
 # Profile and favorites management
 @app.route("/profile")
 def profile():
     """Displays the user's profile, order history, and statistics."""
-    username=auth.authenticate()
+    username = auth.authenticate()
     if "user_id" not in session:
         return redirect(url_for("login"))
 
@@ -420,6 +640,7 @@ def profile():
         username=username,
         orders=orders_with_totals,
         stats=stats,
+        username=username,
     )
 
 
@@ -496,5 +717,75 @@ def calculate_user_stats(orders):
     return stats
 
 
+@app.route("/delivery_timeline/<int:delivery_id>")
+def delivery_timeline(delivery_id):
+    """Displays the delivery timeline for a specific delivery."""
+    username = auth.authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    # Retrieve the order from the database
+    cursor.execute("SELECT * FROM orders WHERE id = ?", (delivery_id,))
+    order_row = cursor.fetchone()
+
+    # Get the shopper's Venmo handle from the database
+    shopper_venmo = None
+    if order_row:
+        # Use user database connection here
+        user_conn = get_user_db_connection()
+        user_cursor = user_conn.cursor()
+        user_cursor.execute(
+            "SELECT venmo_handle FROM users WHERE user_id = ?",
+            (order_row["user_id"],),
+        )
+        shopper = user_cursor.fetchone()
+        if shopper:
+            shopper_venmo = shopper["venmo_handle"]
+        user_conn.close()
+
+    conn.close()
+
+    if not order_row:
+        return "Order not found.", 404
+
+    # Convert the order row to a dictionary
+    order = dict(order_row)
+    order["timeline"] = json.loads(order.get("timeline", "{}"))
+    order["cart"] = json.loads(order.get("cart", "{}"))
+
+    return render_template(
+        "deliverer_timeline.html",
+        order=order,
+        shopper_venmo=shopper_venmo,
+        username=username,
+    )
+
+
+@app.route("/order_details/<int:order_id>")
+def order_details(order_id):
+    """Displays details of a specific order."""
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    # Retrieve the order from the database
+    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order_row = cursor.fetchone()
+    conn.close()
+
+    if not order_row:
+        return "Order not found.", 404
+
+    # Convert the order row to a dictionary
+    order = dict(order_row)
+    order["cart"] = json.loads(order.get("cart", "{}"))
+
+    return render_template("order_details.html", order=order)
+
+
 if __name__ == "__main__":
+    init_user_db()
     app.run(port=8000, debug=get_debug_mode())

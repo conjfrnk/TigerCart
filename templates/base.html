@@ -211,7 +211,7 @@
 
         .footer {
             position: fixed;
-            bottom: 20px;
+            bottom: 10px;
             width: 100%;
             display: flex;
             justify-content: right;
@@ -245,7 +245,8 @@
                     <a href="{{ url_for('profile') }}">Profile</a>
                 {% endif %}
                 <a href="{{ url_for('settings') }}">Settings</a> <!-- Updated to link to settings page -->
-                <a href="#" onclick="logoutUser()">Log Out</a>
+                <a href="{{ url_for('auth.logoutcas') }}">Log Out</a>
+
             </div>
         </div>
     </div>
@@ -255,27 +256,10 @@
         {% endblock %}
     </div>
 
-    <!-- Footer with GitHub button -->
-    <div class="footer">
-        <a href="https://github.com/conjfrnk/tigercart" class="github-button" target="_blank">
-            <i class="fab fa-github"></i>
-            conjfrnk/TigerCart
-        </a>
-    </div>
-
     <script>
         function toggleDropdown() {
             const profileMenu = document.querySelector('.profile');
             profileMenu.classList.toggle('open');
-        }
-
-        function logoutUser() {
-            fetch('/index', { method: 'GET' })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.href = "{{ url_for('home') }}";
-                    }
-                });
         }
 
         window.onclick = function(event) {

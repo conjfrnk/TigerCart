@@ -1,18 +1,76 @@
+<!-- templates/shopper_timeline.html -->
+
 {% extends "base.html" %}
 {% block title %}Order Timeline{% endblock %}
 {% block content %}
-<h1>Your Order Timeline</h1>
-<div id="timeline">
-    <p>Status: {{ order['timeline'] }}</p>
-</div>
-<script>
-    function refreshTimeline() {
-        fetch("{{ url_for('order_status', order_id=order['id']) }}")
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("timeline").innerHTML = "Status: " + data.timeline;
-            });
-    }
-    setInterval(refreshTimeline, 10000);
-</script>
+    <h1>Order Timeline for Order {{ order['id'] }}</h1>
+
+    <hr color="#ff5722">
+
+    <!-- Logistics Section -->
+    <h2><u>Logistics</u></h2>
+    <p><strong>Delivery Location:</strong> {{ order['location'] }}</p>
+    <p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
+    <p><strong>User ID:</strong> {{ order['user_id'] }}</p>
+    <p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
+    <p><strong>Deliverer Venmo:</strong> {{ deliverer_venmo }}</p>
+
+    <hr color="#ff5722">
+
+    <!-- Items Section -->
+    <h2><u>Items</u></h2>
+    <table style="border: 1px solid black; border-collapse: collapse; width: 100%;" align="center">
+        <thead style="border: 1px solid black;">
+            <tr>
+                <th style="border: 1px solid black; padding: 8px;"><strong>Item</strong></th>
+                <th style="border: 1px solid black; padding: 8px;"><strong>Quantity</strong></th>
+            </tr>
+        </thead>
+        <tbody style="border: 1px solid black;">
+            {% for item_id, item in order['cart'].items() %}
+            <tr>
+                <td style="border: 1px solid black; padding: 8px;">{{ item['name'] }}</td>
+                <td style="border: 1px solid black; padding: 8px;">{{ item['quantity'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr color="#ff5722">
+
+    <!-- Timeline Section -->
+    <h2><u>Timeline</u></h2>
+    <div class="timeline">
+        {% set steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+        {% for step in steps %}
+        <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
+            <input type="checkbox" disabled
+                   {% if order['timeline'].get(step, False) %}checked{% endif %}>
+            <span class="step-text">{{ step }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function refreshTimeline() {
+            fetch("{{ url_for('order_status', order_id=order['id']) }}")
+                .then(response => response.json())
+                .then(data => {
+                    const timeline = data.timeline;
+                    const steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'];
+                    steps.forEach(step => {
+                        const checkbox = document.querySelector(`div#${step.toLowerCase().replace(/ /g, '-')}-step input`);
+                        if (checkbox) {
+                            checkbox.checked = timeline[step];
+                        }
+                    });
+                })
+                .catch(error => console.error("Error fetching order status:", error));
+        }
+
+        // Refresh the timeline every 10 seconds
+        setInterval(refreshTimeline, 10000);
+        // Initial call to display current status
+        refreshTimeline();
+    </script>
 {% endblock %}
