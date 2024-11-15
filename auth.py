@@ -31,7 +31,7 @@ import ssl
 auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
 USERNAME = None
-context = ssl._create_unverified_context()
+
 # -----------------------------------------------------------------------
 
 # Return url after stripping out the "ticket" parameter that was

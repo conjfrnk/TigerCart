@@ -639,8 +639,7 @@ def profile():
         "profile.html",
         username=username,
         orders=orders_with_totals,
-        stats=stats,
-        username=username,
+        stats=stats
     )
 
 
