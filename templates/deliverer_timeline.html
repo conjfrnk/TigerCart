@@ -40,7 +40,7 @@
 
 <h2><u>Timeline</u></h2>
 <div class="timeline">
-    {% set steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+    {% set steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
     {% set step_index = loop.index0 %}
     {% set previous_step_completed = step_index == 0 or order['timeline'].get(steps[step_index - 1], False) %}

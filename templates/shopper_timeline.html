@@ -41,7 +41,7 @@
     <!-- Timeline Section -->
     <h2><u>Timeline</u></h2>
     <div class="timeline">
-        {% set steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+        {% set steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
         {% for step in steps %}
         <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
             <input type="checkbox" disabled
@@ -57,7 +57,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const timeline = data.timeline;
-                    const steps = ['Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'];
+                    const steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'];
                     steps.forEach(step => {
                         const checkbox = document.querySelector(`div#${step.toLowerCase().replace(/ /g, '-')}-step input`);
                         if (checkbox) {
