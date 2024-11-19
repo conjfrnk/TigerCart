@@ -37,7 +37,7 @@
 
 ## For 11/20
 
-- [ ] Fix pylint issues
+- [X] Fix pylint issues
 - [ ] Real items, not placeholders
 - [ ] Category ribbon
 - [ ] Favorite items
