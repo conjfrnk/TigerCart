@@ -6,7 +6,7 @@
 
 <hr color="#ff5722">
 
-<h2>Items in {{ category.capitalize() }}</h2>
+<h2><u>Items</u></h2>
 <ul>
     <table style="border: 1px solid black; border-collapse: collapse;" align="center">
         <thead style="border: 1px solid black;">
@@ -40,9 +40,12 @@
     </table>
 </ul>
 
+<hr color="#ff5722">
+
 <!-- View Cart button at the bottom -->
-<a href="{{ url_for('cart_view') }}" class="content-wrapper">
-    <button><i class="fas fa-shopping-cart"></i> View Cart</button>
+ <h2><u>Current Cart</u></h2>
+<a href="{{ url_for('cart_view') }}">
+    <i class="fas fa-shopping-cart"></i> View Cart
 </a>
 
 <script>
