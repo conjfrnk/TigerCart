@@ -23,6 +23,7 @@ from database import (
     init_user_db,
 )
 from auth import auth_bp, authenticate
+from db_utils import update_order_claim_status
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -407,7 +408,7 @@ def place_order():
 @app.route("/deliver")
 def deliver():
     """Display available deliveries for deliverers."""
-    username = authenticate()
+    current_username = authenticate()
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("home"))
@@ -444,14 +445,14 @@ def deliver():
         "deliver.html",
         available_deliveries=available_deliveries,
         my_deliveries=my_deliveries,
-        username=username,
+        username=current_username,
     )
 
 
 @app.route("/delivery/<delivery_id>")
 def delivery_details(delivery_id):
     """Display details of a specific delivery."""
-    username = authenticate()
+    current_username = authenticate()
     response = requests.get(
         f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
     )
@@ -460,7 +461,7 @@ def delivery_details(delivery_id):
         return render_template(
             "delivery_details.html",
             delivery=delivery,
-            username=username,
+            username=current_username,
         )
     return "Delivery not found", 404
 
@@ -468,20 +469,11 @@ def delivery_details(delivery_id):
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
     """Mark the delivery as accepted by changing its status."""
-    username = authenticate()
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("auth.login"))
 
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "UPDATE orders SET status = 'claimed', claimed_by = ? WHERE id = ?",
-        (user_id, delivery_id),
-    )
-    conn.commit()
-    conn.close()
+    update_order_claim_status(user_id, delivery_id)
 
     return redirect(
         url_for("delivery_timeline", delivery_id=delivery_id)
@@ -598,12 +590,12 @@ def update_checklist():
 @app.route("/profile")
 def profile():
     """Display the user's profile, order history, and statistics."""
-    username = authenticate()
+    current_username = authenticate()
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
 
     user_id = session["user_id"]
-    user_data = get_user_data(user_id)
+    user_profile = get_user_data(user_id)
     orders = get_user_orders(user_id)
     stats = calculate_user_stats(orders)
 
@@ -620,9 +612,10 @@ def profile():
 
     return render_template(
         "profile.html",
-        username=username,
+        username=current_username,
         orders=orders_with_totals,
         stats=stats,
+        user_profile=user_profile,
     )
 
 
@@ -659,7 +652,7 @@ def remove_favorite(item_id):
 @app.route("/delivery_timeline/<int:delivery_id>")
 def delivery_timeline(delivery_id):
     """Display the delivery timeline for a specific delivery."""
-    username = authenticate()
+    current_username = authenticate()
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("auth.login"))
@@ -696,7 +689,7 @@ def delivery_timeline(delivery_id):
         "deliverer_timeline.html",
         order=order,
         shopper_venmo=shopper_venmo,
-        username=username,
+        username=current_username,
     )
 
 

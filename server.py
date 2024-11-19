@@ -8,6 +8,7 @@ import json
 from flask import Flask, jsonify, request
 from config import get_debug_mode, SECRET_KEY
 from database import get_main_db_connection, get_user_db_connection
+from db_utils import update_order_claim_status
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -200,15 +201,10 @@ def get_delivery(delivery_id):
 def accept_delivery(delivery_id):
     """Marks the delivery as accepted by changing its status."""
     user_id = request.json.get("user_id")
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
 
-    cursor.execute(
-        "UPDATE orders SET status = 'claimed', claimed_by = ? WHERE id = ?",
-        (user_id, delivery_id),
-    )
-    conn.commit()
-    conn.close()
+    # Use shared function from db_utils
+    update_order_claim_status(user_id, delivery_id)
+
     return jsonify({"success": True}), 200
 
 
