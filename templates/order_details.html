@@ -2,12 +2,13 @@
 {% block title %}Order Details - TigerCart{% endblock %}
 
 {% block content %}
-<h1>Order Details for Order {{ order['id'] }}</h1>
+<h1>Order Details for Order #{{ order['id'] }}</h1>
 
 <hr color="#ff5722">
 
 <h2><u>Order Information</u></h2>
-<p><strong>Date:</strong> {{ order['timestamp'] }}</p>
+<p><strong>Delivery Location:</strong> {{order['location']}}</p>
+<p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
 <p><strong>Status:</strong> {{ order['status'] }}</p>
 <p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
 
@@ -19,8 +20,8 @@
         <tr>
             <td style="border: 1px solid black;"><strong>Item</strong></td>
             <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-            <td style="border: 1px solid black;"><strong>Price</strong></td>
-            <td style="border: 1px solid black;"><strong>Subtotal</strong></td>
+            <td style="border: 1px solid black;"><strong>Price ($)</strong></td>
+            <td style="border: 1px solid black;"><strong>Total ($)</strong></td>
         </tr>
     </thead>
     <tbody>
@@ -28,8 +29,8 @@
         <tr>
             <td style="border: 1px solid black;">{{ item['name'] }}</td>
             <td style="border: 1px solid black;">{{ item['quantity'] }}</td>
-            <td style="border: 1px solid black;">${{ "%.2f"|format(item['price']) }}</td>
-            <td style="border: 1px solid black;">${{ "%.2f"|format(item['quantity'] * item['price']) }}</td>
+            <td style="border: 1px solid black;">{{ "%.2f"|format(item['price']) }}</td>
+            <td style="border: 1px solid black;">{{ "%.2f"|format(item['quantity'] * item['price']) }}</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -37,6 +38,6 @@
 
 <hr color="#ff5722">
 
-<h2><u>Total</u></h2>
-<p><strong>Total Amount Spent:</strong> ${{ "%.2f"|format(order['total']) }}</p>
+<h2><u>Cost</u></h2>
+
 {% endblock %}

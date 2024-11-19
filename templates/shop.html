@@ -5,6 +5,8 @@
 
 {% block content %}
     <h1>Select a Category</h1>
+    <hr color="#ff5722">
+    <h2><u>Categories</u></h2>
     <a href="{{ url_for('category_view', category='drinks') }}">Drinks</a>
     <br>
     <a href="{{ url_for('category_view', category='food') }}">Food</a>
@@ -12,13 +14,15 @@
     <a href="{{ url_for('category_view', category='other') }}">Other</a>
     <br>
     <br>
+    <hr color="#ff5722">
+    <h2><u>Current Cart</u></h2>
     <a href="{{ url_for('cart_view') }}">
         <i class="fas fa-shopping-cart"></i> View Cart
     </a>
 
     {% if current_order %}
         <hr color="#ff5722">
-        <h2>Your Current Order</h2>
+        <h2><u>Your Current Order</u></h2>
         <p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
         <p><strong>Status:</strong> {{ current_order['status'] }}</p>
         <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
