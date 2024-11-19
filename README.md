@@ -32,11 +32,15 @@
 - [ ] Deliverer hide "declined" orders
 - [X] Connect timeline
 - [ ] Improve efficiency (pages should not need to be refreshed to see changes)
+- [ ] Improve UI (timeline mostly)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
-## Alpha
+## For 11/20
 
-- Almost MVP
-- Everything deployed
-- Working end-to-end
-- Timeline!!!!!
+- [ ] Fix pylint issues
+- [ ] Real items, not placeholders
+- [ ] Category ribbon
+- [ ] Favorite items
+- [ ] Improve efficiency
+- [ ] Improve UI
+- [ ] Smooth out UX
