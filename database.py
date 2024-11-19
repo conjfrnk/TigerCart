@@ -130,24 +130,7 @@ def populate_items():
     conn.close()
 
 
-# def populate_users():
-#     """Populates the users table with initial users."""
-#     conn = get_user_db_connection()
-#     cursor = conn.cursor()
-
-#     users = []
-
-#     cursor.executemany(
-#         "INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
-#         users,
-#     )
-
-#     conn.commit()
-#     conn.close()
-
-
 if __name__ == "__main__":
     init_main_db()
     init_user_db()
     populate_items()
-    # populate_users()
