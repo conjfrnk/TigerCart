@@ -5,6 +5,10 @@ application. It handles the routing and rendering of different pages,
 as well as the interaction with the backend server and database.
 """
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
 import json
 import requests
 from flask import (
@@ -141,6 +145,24 @@ def get_category_items():
         for k, v in all_items.items()
         if v.get("category") == category
     }
+
+    # Get user's favorite items
+    user_id = session.get('user_id')
+    favorite_item_ids = set()
+    if user_id:
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = ?",
+            (user_id,)
+        )
+        favorite_items = cursor.fetchall()
+        conn.close()
+        favorite_item_ids = {str(row['item_id']) for row in favorite_items}
+    
+    # Add favorite status to items
+    for item_id_str, item in items_in_category.items():
+        item['is_favorite'] = item_id_str in favorite_item_ids
 
     return jsonify({"items": items_in_category})
 
@@ -765,8 +787,17 @@ def profile():
 
 @app.route("/add_favorite/<item_id>", methods=["POST"])
 def add_favorite(item_id):
+    logging.debug(f"Adding favorite: user_id={session.get('user_id')}, item_id={item_id}")
     """Add an item to the user's favorites."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+
+    try:
+        item_id = int(item_id)
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid item ID"}), 400
+
     conn = get_user_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -775,13 +806,22 @@ def add_favorite(item_id):
     )
     conn.commit()
     conn.close()
-    return jsonify({"success": True})
+    return jsonify({"success": True}), 200
 
 
 @app.route("/remove_favorite/<item_id>", methods=["POST"])
 def remove_favorite(item_id):
+    logging.debug(f"Removing favorite: user_id={session.get('user_id')}, item_id={item_id}")
     """Remove an item from the user's favorites."""
-    user_id = session["user_id"]
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+    
+    try:
+        item_id = int(item_id)
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid item ID"}), 400
+
     conn = get_user_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -790,7 +830,7 @@ def remove_favorite(item_id):
     )
     conn.commit()
     conn.close()
-    return jsonify({"success": True})
+    return jsonify({"success": True}), 200
 
 
 @app.route("/delivery_timeline/<int:delivery_id>")
