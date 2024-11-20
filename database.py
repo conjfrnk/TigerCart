@@ -73,6 +73,7 @@ def init_user_db():
             user_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             venmo_handle TEXT,
+            phone_number TEXT,
             cart TEXT DEFAULT '{}'
         )
         """

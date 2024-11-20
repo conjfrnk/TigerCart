@@ -7,6 +7,10 @@
 <form method="POST" action="{{ url_for('settings') }}">
     <label for="venmo_handle">Venmo Username:</label>
     <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
+    <br><br>
+    <label for="phone_number">Phone Number:</label>
+    <input type="tel" name="phone_number" id="phone_number" value="{{ phone_number }}" required pattern="[0-9]{10}">
+    <br><br>
     <button type="submit">Save</button>
 </form>
 {% endblock %}

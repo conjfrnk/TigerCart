@@ -57,7 +57,7 @@ def home():
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
-    """Handle user settings page for updating Venmo handle."""
+    """Handle user settings page for updating Venmo handle and phone number."""
     username = authenticate()
     user_id = username
     conn = get_user_db_connection()
@@ -65,24 +65,27 @@ def settings():
 
     if request.method == "POST":
         venmo_handle = request.form.get("venmo_handle")
+        phone_number = request.form.get("phone_number")
         cursor.execute(
-            "UPDATE users SET venmo_handle = ? WHERE user_id = ?",
-            (venmo_handle, user_id),
+            "UPDATE users SET venmo_handle = ?, phone_number = ? WHERE user_id = ?",
+            (venmo_handle, phone_number, user_id),
         )
         conn.commit()
         conn.close()
-        flash("Venmo handle updated successfully.")
+        flash("Settings updated successfully.")
         return redirect(url_for("settings"))
 
     user = cursor.execute(
-        "SELECT venmo_handle FROM users WHERE user_id = ?", (user_id,)
+        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?", (user_id,)
     ).fetchone()
     conn.close()
     return render_template(
         "settings.html",
         venmo_handle=user["venmo_handle"] if user else "",
+        phone_number=user["phone_number"] if user else "",
         username=username,
     )
+
 
 
 @app.route("/shop")
@@ -103,7 +106,7 @@ def shop():
     cursor = conn.cursor()
     cursor.execute(
         """SELECT * FROM orders
-        WHERE user_id = ? AND status IN ('PLACED', 'CLAIMED')
+        WHERE user_id = ? AND status IN ('placed', 'claimed')
         ORDER BY timestamp DESC LIMIT 1""",
         (user_id,),
     )
@@ -153,16 +156,18 @@ def shopper_timeline():
     order = cursor.fetchone()
 
     deliverer_venmo = None
+    deliverer_phone = None
     if order and order["claimed_by"]:
         user_conn = get_user_db_connection()
         user_cursor = user_conn.cursor()
         user_cursor.execute(
-            "SELECT venmo_handle FROM users WHERE user_id = ?",
+            "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
             (order["claimed_by"],),
         )
         deliverer = user_cursor.fetchone()
         if deliverer:
             deliverer_venmo = deliverer["venmo_handle"]
+            deliverer_phone = deliverer["phone_number"]
         user_conn.close()
 
     conn.close()
@@ -171,17 +176,17 @@ def shopper_timeline():
         return "No orders found."
 
     order_dict = dict(order)
-    order_dict["timeline"] = json.loads(
-        order_dict.get("timeline", "{}")
-    )
+    order_dict["timeline"] = json.loads(order_dict.get("timeline", "{}"))
     order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
 
     return render_template(
         "shopper_timeline.html",
         order=order_dict,
         deliverer_venmo=deliverer_venmo,
+        deliverer_phone=deliverer_phone,
         username=username,
     )
+
 
 
 @app.route("/category_view/<category>")
@@ -487,7 +492,7 @@ def place_order():
         (status, user_id, total_items, cart, location, timeline)
         VALUES (?, ?, ?, ?, ?, ?)""",
         (
-            "PLACED",
+            "placed",
             user_id,
             total_items,
             json.dumps(cart),
@@ -518,11 +523,11 @@ def deliver():
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'")
+    cursor.execute("SELECT * FROM orders WHERE status = 'placed'")
     available_deliveries = cursor.fetchall()
 
     cursor.execute(
-        "SELECT * FROM orders WHERE status = 'CLAIMED' AND claimed_by = ?",
+        "SELECT * FROM orders WHERE status = 'claimed' AND claimed_by = ?",
         (user_id,),
     )
     my_deliveries = cursor.fetchall()
@@ -769,16 +774,18 @@ def delivery_timeline(delivery_id):
     order_row = cursor.fetchone()
 
     shopper_venmo = None
+    shopper_phone = None  # Initialize shopper_phone
     if order_row:
         user_conn = get_user_db_connection()
         user_cursor = user_conn.cursor()
         user_cursor.execute(
-            "SELECT venmo_handle FROM users WHERE user_id = ?",
+            "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
             (order_row["user_id"],),
         )
         shopper = user_cursor.fetchone()
         if shopper:
             shopper_venmo = shopper["venmo_handle"]
+            shopper_phone = shopper["phone_number"]
         user_conn.close()
 
     conn.close()
@@ -794,6 +801,7 @@ def delivery_timeline(delivery_id):
         "deliverer_timeline.html",
         order=order,
         shopper_venmo=shopper_venmo,
+        shopper_phone=shopper_phone,
         username=current_username,
     )
 
@@ -866,6 +874,13 @@ def calculate_user_stats(orders):
         "total_spent": round(total_spent, 2),
         "total_items": total_items,
     }
+# Run this once to alter the table
+def add_phone_number_column():
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('ALTER TABLE users ADD COLUMN phone_number TEXT;')
+    conn.commit()
+    conn.close()
 
 
 if __name__ == "__main__":

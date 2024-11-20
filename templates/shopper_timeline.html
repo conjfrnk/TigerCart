@@ -17,6 +17,11 @@
     {% else %}
         <p><strong>Deliverer Venmo:</strong> N/A</p>
     {% endif %}
+    {% if deliverer_phone %}
+        <p><strong>Deliverer Phone:</strong> {{ deliverer_phone }}</p>
+    {% else %}
+        <p><strong>Deliverer Phone:</strong> N/A</p>
+    {% endif %}
 
     <hr color="#ff5722">
 
