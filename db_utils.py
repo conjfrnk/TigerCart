@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # db_utils.py
-"""Database utility functions for shared database operations."""
+"""
+db_utils.py
+Database utility functions for shared database operations.
+"""
+
 from typing import Union
 from database import get_main_db_connection
 

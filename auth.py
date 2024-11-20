@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-""" auth.py Authors: See below"""
-
-# -----------------------------------------------------------------------
-# auth.py
-# Authors: Alex Halderman, Scott Karlin, Brian Kernighan, Bob Dondero
-# -----------------------------------------------------------------------
+""" 
+auth.py
+Handles authentication with CAS and user sessions.
+"""
 
 import re
 import ssl

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 database.py
-Populates tigercart.sqlite3 and users.sqlite3
+This module handles database connections and initialization.
 """
 
 import sqlite3

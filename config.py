@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""Configuration module for the TigerCart application.
-
+"""
+config.py
 This module handles configuration settings including secret key generation
 and debug mode settings. It provides a centralized location for managing
 application-wide configuration options.

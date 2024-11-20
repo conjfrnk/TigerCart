@@ -1,7 +1,8 @@
-#!/usr/bin/env python
 """
 app.py
-Authors: TigerCart team
+This file contains the main application logic for the U-Store web 
+application. It handles the routing and rendering of different pages, 
+as well as the interaction with the backend server and database.
 """
 
 import json
