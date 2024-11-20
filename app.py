@@ -88,10 +88,11 @@ def settings():
 def shop():
     """Display items available in the shop and current order if any."""
     username = authenticate()
-    response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-    )
+    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
     sample_items = response.json()
+
+    # Extract unique categories from items
+    categories = set(item['category'] for item in sample_items.values())
 
     user_id = session.get("user_id")
     if not user_id:
@@ -110,10 +111,27 @@ def shop():
 
     return render_template(
         "shop.html",
-        items=sample_items,
+        categories=sorted(categories),
         current_order=current_order,
         username=username,
     )
+
+@app.route("/get_category_items")
+def get_category_items():
+    """Return items for a specific category in JSON format."""
+    category = request.args.get('category')
+    if not category:
+        return jsonify({'error': 'Category not specified'}), 400
+
+    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    all_items = response.json()
+
+    # Filter items by category
+    items_in_category = {
+        k: v for k, v in all_items.items() if v.get('category') == category
+    }
+
+    return jsonify({'items': items_in_category})
 
 
 @app.route("/shopper_timeline")
