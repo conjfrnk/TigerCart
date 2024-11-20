@@ -44,7 +44,7 @@
     <!-- Timeline Section -->
     <h2><u>Timeline</u></h2>
     <div class="timeline">
-        {% set steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+        {% set steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
         {% for step in steps %}
         <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
             <input type="checkbox" disabled
