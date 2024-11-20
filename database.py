@@ -45,7 +45,7 @@ def init_main_db():
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY,
             status TEXT CHECK(status IN
-            ('placed', 'claimed', 'fulfilled', 'declined', 'cancelled')),
+            ('PLACED', 'CLAIMED', 'FULFILLED', 'DECLINED', 'CANCELLED')),
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             user_id TEXT,
             total_items INTEGER,

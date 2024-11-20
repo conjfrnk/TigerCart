@@ -102,7 +102,7 @@ def shop():
     cursor = conn.cursor()
     cursor.execute(
         """SELECT * FROM orders
-        WHERE user_id = ? AND status IN ('placed', 'claimed')
+        WHERE user_id = ? AND status IN ('PLACED', 'CLAIMED')
         ORDER BY timestamp DESC LIMIT 1""",
         (user_id,),
     )
@@ -403,7 +403,7 @@ def place_order():
         (status, user_id, total_items, cart, location, timeline)
         VALUES (?, ?, ?, ?, ?, ?)""",
         (
-            "placed",
+            "PLACED",
             user_id,
             total_items,
             json.dumps(cart),
@@ -434,11 +434,11 @@ def deliver():
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE status = 'placed'")
+    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'")
     available_deliveries = cursor.fetchall()
 
     cursor.execute(
-        "SELECT * FROM orders WHERE status = 'claimed' AND claimed_by = ?",
+        "SELECT * FROM orders WHERE status = 'CLAIMED' AND claimed_by = ?",
         (user_id,),
     )
     my_deliveries = cursor.fetchall()
@@ -722,6 +722,7 @@ def order_details(order_id):
 
     cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
     order_row = cursor.fetchone()
+    conn.commit()
     conn.close()
 
     if not order_row:
@@ -729,8 +730,14 @@ def order_details(order_id):
 
     order = dict(order_row)
     order["cart"] = json.loads(order.get("cart", "{}"))
+    cart = order["cart"]
 
-    return render_template("order_details.html", order=order)
+    subtotal = sum(
+        details.get("quantity", 0) * details.get("price", 0)
+        for item_id, details in cart.items()
+    )
+
+    return render_template("order_details.html", order=order, subtotal=subtotal)
 
 
 def get_user_data(user_id):

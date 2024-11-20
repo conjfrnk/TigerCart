@@ -38,6 +38,7 @@
 ## For 11/20
 
 - [X] Fix pylint issues
+- [X] Fix the reloading after checking checklist
 - [ ] Real items, not placeholders
 - [ ] Category ribbon
 - [ ] Favorite items

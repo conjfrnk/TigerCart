@@ -175,7 +175,6 @@
             top: 50px;
             height: 50px;
             width: 2px;
-            background-color: gray;
         }
 
         .step-text {
@@ -304,6 +303,7 @@
             <div class="user-name">{{ username }} &nbsp;</div>
             <i class="fas fa-user-circle profile-icon"></i>
             <div class="dropdown">
+                <a href="{{ url_for('home') }}">Home</a>
                 {% if session.get("user_id") %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                 {% endif %}
