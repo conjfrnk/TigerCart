@@ -527,7 +527,7 @@ def place_order():
         (status, user_id, total_items, cart, location, timeline)
         VALUES (?, ?, ?, ?, ?, ?)""",
         (
-            "placed",
+            "PLACED",
             user_id,
             total_items,
             json.dumps(cart),
