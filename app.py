@@ -576,6 +576,7 @@ def update_checklist():
                 400,
             )
 
+    # Update the timeline
     timeline[step] = checked
     cursor.execute(
         "UPDATE orders SET timeline = ? WHERE id = ?",
@@ -584,7 +585,9 @@ def update_checklist():
     conn.commit()
     conn.close()
 
-    return jsonify({"success": True}), 200
+    # Return the updated timeline
+    return jsonify({"success": True, "timeline": timeline}), 200
+
 
 
 @app.route("/profile")

@@ -40,16 +40,16 @@
 
 <h2><u>Timeline</u></h2>
 <div class="timeline">
-    {% set steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
+    {% set steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
     {% set step_index = loop.index0 %}
     {% set previous_step_completed = step_index == 0 or order['timeline'].get(steps[step_index - 1], False) %}
     <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
         <input type="checkbox"
                data-step="{{ step }}"
-               onclick="updateChecklist('{{ step }}', this.checked)" 
                {% if not previous_step_completed %}disabled{% endif %}
-               {% if order['timeline'].get(step, False) %}checked{% endif %}>
+               {% if order['timeline'].get(step, False) %}checked{% endif %}
+               onchange="updateChecklist('{{ step }}', this.checked)">
         <span class="step-text">{{ step }}</span>
     </div>
     {% endfor %}
@@ -77,8 +77,22 @@
                       checkbox.checked = !checked;
                   }
               } else {
-                  // Reload the page to update the disabled state of checkboxes
-                  location.reload();
+                  // Update the checkboxes based on the new timeline
+                  const timeline = data.timeline;
+                  const steps = {{ steps | tojson }};
+                  steps.forEach((stepName, index) => {
+                      const checkbox = document.querySelector(`input[data-step="${stepName}"]`);
+                      if (checkbox) {
+                          checkbox.checked = timeline[stepName];
+                          // Disable or enable the checkbox based on previous steps
+                          if (index === 0) {
+                              checkbox.disabled = false;
+                          } else {
+                              const previousStep = steps[index - 1];
+                              checkbox.disabled = !timeline[previousStep];
+                          }
+                      }
+                  });
               }
           }).catch(error => {
               console.error("Error updating checklist:", error);
@@ -86,4 +100,5 @@
           });
     }
 </script>
+
 {% endblock %}
