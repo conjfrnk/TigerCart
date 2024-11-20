@@ -1,3 +1,5 @@
+// This file contains JavaScript code that is used to interact with the server
+
 document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', function(event) {
         if (event.target.classList.contains('add-to-cart')) {

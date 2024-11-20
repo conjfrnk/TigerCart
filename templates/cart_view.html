@@ -1,4 +1,4 @@
-<!-- This is the page that show's the customer's shopping cart -->
+<!-- templates/cart_view.html -->
 
 {% extends "base.html" %}
 {% block title %}Your Cart - TigerCart{% endblock %}
@@ -9,46 +9,153 @@
 <hr color="#ff5722">
 
 <h2><u>Items</u></h2>
-    {% if cart.items() %}
-        <ul>
-            <table style="border: 1px solid black; border-collapse: collapse;" align="center">
-                <thead style="border: 1px solid black">
-                    <tr>
-                        <td style="border: 1px solid black;"><strong>Item</strong></td>
-                        <td style="border: 1px solid black;"><strong>Price ($)</strong></td>
-                        <td style="border: 1px solid black;"><strong>Decrease Quantity</strong></td>
-                        <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-                        <td style="border: 1px solid black;"><strong>Increase Quantity</strong></td>
-                        <td style="border: 1px solid black;"><strong>Remove Item</strong></td>
-                    </tr>
-                </thead>
-                <tbody style="border: 1px solid black;">
-                    {% for item_id, details in cart.items() %}
-                    <tr>
-                        <td style="border: 1px solid black;">{{items[item_id].name}}</td>
-                        <td style="border: 1px solid black;">{{items[item_id].price}}</td>
-                        <td style="border: 1px solid black;"><button onclick="updateQuantity('{{ item_id }}', 'decrease')">-</button></td>
-                        <td style="border: 1px solid black;">{{details.quantity}}</td>
-                        <td style="border: 1px solid black;"><button onclick="updateQuantity('{{ item_id }}', 'increase')">+</button></td>
-                        <td style="border: 1px solid black;"><button class="delete-button" onclick="deleteItem('{{ item_id }}')">Delete</button></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </ul>
-    {% else %}
-        <p>There are no items in your cart.</p>
-    {% endif %}
+{% if cart.items() %}
+    <ul>
+        <table id="cart-table" style="border: 1px solid black; border-collapse: collapse;" align="center">
+            <thead style="border: 1px solid black">
+                <tr>
+                    <td style="border: 1px solid black;"><strong>Item</strong></td>
+                    <td style="border: 1px solid black;"><strong>Price ($)</strong></td>
+                    <td style="border: 1px solid black;"><strong>Decrease Quantity</strong></td>
+                    <td style="border: 1px solid black;"><strong>Quantity</strong></td>
+                    <td style="border: 1px solid black;"><strong>Increase Quantity</strong></td>
+                    <td style="border: 1px solid black;"><strong>Remove Item</strong></td>
+                </tr>
+            </thead>
+            <tbody style="border: 1px solid black;">
+                {% for item_id, details in cart.items() %}
+                <tr id="item-row-{{ item_id }}">
+                    <td style="border: 1px solid black;">{{ items[item_id].name }}</td>
+                    <td style="border: 1px solid black;">{{ items[item_id].price }}</td>
+                    <td style="border: 1px solid black;">
+                        <button type="button" onclick="updateQuantity('{{ item_id }}', 'decrease')">-</button>
+                    </td>
+                    <td style="border: 1px solid black;">{{ details.quantity }}</td>
+                    <td style="border: 1px solid black;">
+                        <button type="button" onclick="updateQuantity('{{ item_id }}', 'increase')">+</button>
+                    </td>
+                    <td style="border: 1px solid black;">
+                        <button type="button" class="delete-button" onclick="deleteItem('{{ item_id }}')">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </ul>
+{% else %}
+    <p>There are no items in your cart.</p>
+{% endif %}
 
 <hr color="#ff5722">
 
 <h2><u>Cost</u></h2>
-<p><strong>Subtotal: </strong>${{ "%.2f"|format(subtotal) }}</p>
-<p><strong>Delivery Fee (10%): </strong>${{ "%.2f"|format(delivery_fee) }}</p>
-<p><strong>Total: </strong>${{ "%.2f"|format(total) }}</p>
+<p><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
+<p><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
+<p><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></p>
 
 <hr color="#ff5722">
 
 <h2><u>Place Order</u></h2>
-<button onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
+<button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
+
+<!-- JavaScript for dynamic cart updates -->
+<script>
+    function deleteItem(itemId) {
+        fetch(`/delete_item/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  // Remove the item's row from the table
+                  const itemRow = document.getElementById(`item-row-${itemId}`);
+                  if (itemRow) {
+                      itemRow.remove();
+                  }
+
+                  // Update the totals
+                  document.getElementById('subtotal').textContent = data.subtotal;
+                  document.getElementById('delivery-fee').textContent = data.delivery_fee;
+                  document.getElementById('total').textContent = data.total;
+
+                  // Check if the cart is empty
+                  const cartTable = document.getElementById('cart-table');
+                  if (cartTable.querySelector('tbody').children.length === 0) {
+                      cartTable.remove();
+                      document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
+                  }
+              } else {
+                  alert(data.error || 'Failed to delete item.');
+              }
+          }).catch(error => {
+              console.error('Error deleting item:', error);
+              alert('An error occurred while deleting the item.');
+          });
+    }
+
+    function updateQuantity(itemId, action) {
+        fetch(`/update_cart/${itemId}/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  // Refresh the cart data
+                  refreshCart();
+              } else {
+                  alert(data.error || 'Failed to update item quantity.');
+              }
+          }).catch(error => {
+              console.error('Error updating item quantity:', error);
+              alert('An error occurred while updating the item quantity.');
+          });
+    }
+
+    function refreshCart() {
+        fetch(`{{ url_for('get_cart_data') }}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the cart table
+                    const cartTableBody = document.querySelector('#cart-table tbody');
+                    cartTableBody.innerHTML = '';
+
+                    for (const [itemId, details] of Object.entries(data.cart)) {
+                        const item = data.items[itemId];
+                        const tr = document.createElement('tr');
+                        tr.id = `item-row-${itemId}`;
+                        tr.innerHTML = `
+                            <td style="border: 1px solid black;">${item.name}</td>
+                            <td style="border: 1px solid black;">${item.price}</td>
+                            <td style="border: 1px solid black;"><button type="button" onclick="updateQuantity('${itemId}', 'decrease')">-</button></td>
+                            <td style="border: 1px solid black;">${details.quantity}</td>
+                            <td style="border: 1px solid black;"><button type="button" onclick="updateQuantity('${itemId}', 'increase')">+</button></td>
+                            <td style="border: 1px solid black;"><button type="button" class="delete-button" onclick="deleteItem('${itemId}')">Delete</button></td>
+                        `;
+                        cartTableBody.appendChild(tr);
+                    }
+
+                    // Update the totals
+                    document.getElementById('subtotal').textContent = data.subtotal;
+                    document.getElementById('delivery-fee').textContent = data.delivery_fee;
+                    document.getElementById('total').textContent = data.total;
+
+                    // If cart is empty
+                    if (Object.keys(data.cart).length === 0) {
+                        document.getElementById('cart-table').remove();
+                        document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
+                    }
+                } else {
+                    alert('Failed to refresh cart data.');
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing cart data:', error);
+            });
+    }
+</script>
 {% endblock %}

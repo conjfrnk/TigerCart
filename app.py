@@ -261,17 +261,53 @@ def add_to_cart(item_id):
 
 @app.route("/delete_item/<item_id>", methods=["POST"])
 def delete_item(item_id):
-    """Delete an item from the cart."""
+    """Delete an item from the cart and return updated cart info."""
+    user_id = session["user_id"]
+    # Delete the item from the cart
     response = requests.post(
         f"{SERVER_URL}/cart",
         json={
-            "user_id": session["user_id"],
+            "user_id": user_id,
             "item_id": item_id,
             "action": "delete",
         },
         timeout=REQUEST_TIMEOUT,
     )
-    return jsonify(response.json())
+
+    if response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to delete item"}), 500
+
+    # Fetch the updated cart
+    cart_response = requests.get(
+        f"{SERVER_URL}/cart",
+        json={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT,
+    )
+    cart = cart_response.json()
+
+    # Fetch all items to get prices
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
+    items = items_response.json()
+
+    # Recalculate totals
+    subtotal = sum(
+        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        for item_id, details in cart.items()
+        if isinstance(details, dict)
+    )
+    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+    total = round(subtotal + delivery_fee, 2)
+
+    return jsonify({
+        "success": True,
+        "cart": cart,
+        "subtotal": f"{subtotal:.2f}",
+        "delivery_fee": f"{delivery_fee:.2f}",
+        "total": f"{total:.2f}",
+    })
+
 
 
 @app.route("/update_cart/<item_id>/<action>", methods=["POST"])
@@ -279,7 +315,7 @@ def update_cart(item_id, action):
     """Update the cart by increasing or decreasing item quantities."""
     user_id = session["user_id"]
     if action == "increase":
-        requests.post(
+        response = requests.post(
             f"{SERVER_URL}/cart",
             json={
                 "user_id": user_id,
@@ -297,7 +333,7 @@ def update_cart(item_id, action):
         cart = cart_response.json()
         quantity = cart.get(item_id, {}).get("quantity", 0)
         if quantity > 1:
-            requests.post(
+            response = requests.post(
                 f"{SERVER_URL}/cart",
                 json={
                     "user_id": user_id,
@@ -308,7 +344,7 @@ def update_cart(item_id, action):
                 timeout=REQUEST_TIMEOUT,
             )
         elif quantity == 1:
-            requests.post(
+            response = requests.post(
                 f"{SERVER_URL}/cart",
                 json={
                     "user_id": user_id,
@@ -317,8 +353,55 @@ def update_cart(item_id, action):
                 },
                 timeout=REQUEST_TIMEOUT,
             )
+        else:
+            return jsonify({"success": False, "error": "Item not in cart"}), 400
+    else:
+        return jsonify({"success": False, "error": "Invalid action"}), 400
+
+    if response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to update cart"}), 500
+
     return jsonify({"success": True})
 
+
+@app.route("/get_cart_data")
+def get_cart_data():
+    """Return the current cart data and totals."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+
+    # Fetch the cart
+    cart_response = requests.get(
+        f"{SERVER_URL}/cart",
+        json={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT,
+    )
+    cart = cart_response.json()
+
+    # Fetch all items to get prices
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
+    items = items_response.json()
+
+    # Recalculate totals
+    subtotal = sum(
+        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        for item_id, details in cart.items()
+        if isinstance(details, dict)
+    )
+    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+    total = round(subtotal + delivery_fee, 2)
+
+    return jsonify({
+        "success": True,
+        "cart": cart,
+        "items": items,
+        "subtotal": f"{subtotal:.2f}",
+        "delivery_fee": f"{delivery_fee:.2f}",
+        "total": f"{total:.2f}",
+    })
 
 @app.route("/order_status/<int:order_id>")
 def order_status(order_id):
