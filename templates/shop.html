@@ -79,11 +79,27 @@
                         const tbody = document.createElement('tbody');
                         for (const [itemId, item] of Object.entries(data.items)) {
                             const tr = document.createElement('tr');
+                            const isFavorite = item.is_favorite;
+                            
                             tr.innerHTML = `
-                                <td>${item.name}</td>
+                                <td>${item.name} <i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
                                 <td>${item.price}</td>
                                 <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
                             `;
+                            
+                            // Add event listener ot heart icon
+                            const heartIcon = tr.querySelector('.fa-heart');
+                            heartIcon.addEventListener('click', function() {
+                                const isFavoriteNow = heartIcon.classList.contains('fas');
+                                if (isFavoriteNow) {
+                                    // Currently favorite, remove favorite
+                                    removeFavorite(itemId, heartIcon);
+                                } else {
+                                    // Currently not favorite, add favorite
+                                    addFavorite(itemId, heartIcon);
+                                }
+                            });
+
                             tbody.appendChild(tr);
                         }
                         table.appendChild(tbody);
@@ -97,6 +113,46 @@
                     console.error('Error fetching category items:', error);
                     alert('Failed to load items.');
                 });
+        }
+
+        function addFavorite(itemId, heartIcon) {
+            fetch(`/add_favorite/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    heartIcon.classList.remove('far');
+                    heartIcon.classList.add('fas');
+                    heartIcon.style.color = 'red';
+                } else {
+                    response.json().then(data => alert('Error: ' + data.error));
+                }
+            }).catch(error => {
+                console.error('Error adding favorite:', error);
+                alert('Failed to add favorite.');
+            });
+        }
+
+        function removeFavorite(itemId, heartIcon) {
+            fetch(`/remove_favorite/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    heartIcon.classList.remove('fas');
+                    heartIcon.classList.add('far');
+                    heartIcon.style.color = ''
+                } else {
+                    response.json().then(data => alert ('Error: ' + data.error));
+                }
+            }).catch(error => {
+                console.error('Error removing favorite:', error);
+                alert('Failed to remove favorite.');
+            });
         }
 
         function addToCart(itemId) {
