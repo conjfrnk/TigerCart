@@ -38,10 +38,9 @@
 ## For 11/20
 
 - [X] Fix pylint issues
-- [X] Fix the reloading after checking checklist
 - [ ] Real items, not placeholders
-- [ ] Category ribbon
+- [X] Category ribbon
 - [ ] Favorite items
-- [ ] Improve efficiency
+- [X] Improve efficiency (Fix the reloading after checking checklist)
 - [ ] Improve UI
 - [ ] Smooth out UX
