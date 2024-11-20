@@ -20,8 +20,8 @@
         <tr>
             <td style="border: 1px solid black;"><strong>Item</strong></td>
             <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-            <td style="border: 1px solid black;"><strong>Price ($)</strong></td>
-            <td style="border: 1px solid black;"><strong>Total ($)</strong></td>
+            <td style="border: 1px solid black;"><strong>Unit Price ($)</strong></td>
+            <td style="border: 1px solid black;"><strong>Total Price ($)</strong></td>
         </tr>
     </thead>
     <tbody>
@@ -39,5 +39,8 @@
 <hr color="#ff5722">
 
 <h2><u>Cost</u></h2>
+<p><strong>Subtotal:</strong> ${{ "%.2f"|format(subtotal)}}</p>
+<p><strong>Delivery Fee (10%):</strong> ${{ "%.2f"|format(subtotal * 0.1)}}</p>
+<p><strong>Total:</strong> ${{ "%.2f"|format(subtotal * 1.1)}}</p>
 
 {% endblock %}

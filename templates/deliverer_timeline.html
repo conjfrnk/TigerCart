@@ -10,9 +10,13 @@
 <h2><u>Logistics</u></h2>
 <p><strong>Delivery Location:</strong> {{ order['location'] }}</p>
 <p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
-<p><strong>User ID:</strong> {{ order['user_id'] }}</p>
+<p><strong>Shopper ID:</strong> {{ order['user_id'] }}</p>
 <p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
-<p><strong>Shopper Venmo:</strong> {{ shopper_venmo }}</p>
+{% if shopper_venmo %}
+    <p><strong>Shopper Venmo:</strong> @{{ shopper_venmo }}</p>
+{% else %}
+    <p><strong>Shopper Venmo:</strong> N/A</p>
+{% endif %}
 
 <hr color="#ff5722">
 

@@ -133,8 +133,8 @@ def get_deliveries():
         """
         SELECT id, timestamp, user_id, total_items, cart, location, status, claimed_by
         FROM orders
-        WHERE (status = 'placed' OR (status = 'claimed' AND claimed_by = ?))
-        AND status != 'declined'
+        WHERE (status = 'PLACED' OR (status = 'CLAIMED' AND claimed_by = ?))
+        AND status != 'DECLINED'
         """,
         (deliverer_id,),
     ).fetchall()
@@ -210,12 +210,12 @@ def accept_delivery(delivery_id):
 
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
 def decline_delivery(delivery_id):
-    """Declines the delivery by updating the status to 'declined'."""
+    """Declines the delivery by updating the status to 'DECLINED'."""
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE orders SET status = 'declined' WHERE id = ?",
+        "UPDATE orders SET status = 'DECLINED' WHERE id = ?",
         (delivery_id,),
     )
     conn.commit()
