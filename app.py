@@ -76,7 +76,8 @@ def settings():
         return redirect(url_for("settings"))
 
     user = cursor.execute(
-        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?", (user_id,)
+        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
+        (user_id,),
     ).fetchone()
     conn.close()
     return render_template(
@@ -87,16 +88,17 @@ def settings():
     )
 
 
-
 @app.route("/shop")
 def shop():
     """Display items available in the shop and current order if any."""
     username = authenticate()
-    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     sample_items = response.json()
 
     # Extract unique categories from items
-    categories = set(item['category'] for item in sample_items.values())
+    categories = set(item["category"] for item in sample_items.values())
 
     user_id = session.get("user_id")
     if not user_id:
@@ -120,22 +122,27 @@ def shop():
         username=username,
     )
 
+
 @app.route("/get_category_items")
 def get_category_items():
     """Return items for a specific category in JSON format."""
-    category = request.args.get('category')
+    category = request.args.get("category")
     if not category:
-        return jsonify({'error': 'Category not specified'}), 400
+        return jsonify({"error": "Category not specified"}), 400
 
-    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     all_items = response.json()
 
     # Filter items by category
     items_in_category = {
-        k: v for k, v in all_items.items() if v.get('category') == category
+        k: v
+        for k, v in all_items.items()
+        if v.get("category") == category
     }
 
-    return jsonify({'items': items_in_category})
+    return jsonify({"items": items_in_category})
 
 
 @app.route("/shopper_timeline")
@@ -176,7 +183,9 @@ def shopper_timeline():
         return "No orders found."
 
     order_dict = dict(order)
-    order_dict["timeline"] = json.loads(order_dict.get("timeline", "{}"))
+    order_dict["timeline"] = json.loads(
+        order_dict.get("timeline", "{}")
+    )
     order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
 
     return render_template(
@@ -186,7 +195,6 @@ def shopper_timeline():
         deliverer_phone=deliverer_phone,
         username=username,
     )
-
 
 
 @app.route("/category_view/<category>")
@@ -280,7 +288,12 @@ def delete_item(item_id):
     )
 
     if response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to delete item"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to delete item"}
+            ),
+            500,
+        )
 
     # Fetch the updated cart
     cart_response = requests.get(
@@ -298,21 +311,23 @@ def delete_item(item_id):
 
     # Recalculate totals
     subtotal = sum(
-        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        details.get("quantity", 0)
+        * items.get(item_id, {}).get("price", 0)
         for item_id, details in cart.items()
         if isinstance(details, dict)
     )
     delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
     total = round(subtotal + delivery_fee, 2)
 
-    return jsonify({
-        "success": True,
-        "cart": cart,
-        "subtotal": f"{subtotal:.2f}",
-        "delivery_fee": f"{delivery_fee:.2f}",
-        "total": f"{total:.2f}",
-    })
-
+    return jsonify(
+        {
+            "success": True,
+            "cart": cart,
+            "subtotal": f"{subtotal:.2f}",
+            "delivery_fee": f"{delivery_fee:.2f}",
+            "total": f"{total:.2f}",
+        }
+    )
 
 
 @app.route("/update_cart/<item_id>/<action>", methods=["POST"])
@@ -359,12 +374,25 @@ def update_cart(item_id, action):
                 timeout=REQUEST_TIMEOUT,
             )
         else:
-            return jsonify({"success": False, "error": "Item not in cart"}), 400
+            return (
+                jsonify(
+                    {"success": False, "error": "Item not in cart"}
+                ),
+                400,
+            )
     else:
-        return jsonify({"success": False, "error": "Invalid action"}), 400
+        return (
+            jsonify({"success": False, "error": "Invalid action"}),
+            400,
+        )
 
     if response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to update cart"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to update cart"}
+            ),
+            500,
+        )
 
     return jsonify({"success": True})
 
@@ -374,7 +402,10 @@ def get_cart_data():
     """Return the current cart data and totals."""
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     # Fetch the cart
     cart_response = requests.get(
@@ -392,21 +423,25 @@ def get_cart_data():
 
     # Recalculate totals
     subtotal = sum(
-        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        details.get("quantity", 0)
+        * items.get(item_id, {}).get("price", 0)
         for item_id, details in cart.items()
         if isinstance(details, dict)
     )
     delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
     total = round(subtotal + delivery_fee, 2)
 
-    return jsonify({
-        "success": True,
-        "cart": cart,
-        "items": items,
-        "subtotal": f"{subtotal:.2f}",
-        "delivery_fee": f"{delivery_fee:.2f}",
-        "total": f"{total:.2f}",
-    })
+    return jsonify(
+        {
+            "success": True,
+            "cart": cart,
+            "items": items,
+            "subtotal": f"{subtotal:.2f}",
+            "delivery_fee": f"{delivery_fee:.2f}",
+            "total": f"{total:.2f}",
+        }
+    )
+
 
 @app.route("/order_status/<int:order_id>")
 def order_status(order_id):
@@ -696,7 +731,6 @@ def update_checklist():
     return jsonify({"success": True, "timeline": timeline}), 200
 
 
-
 @app.route("/profile")
 def profile():
     """Display the user's profile, order history, and statistics."""
@@ -829,7 +863,9 @@ def order_details(order_id):
         for item_id, details in cart.items()
     )
 
-    return render_template("order_details.html", order=order, subtotal=subtotal)
+    return render_template(
+        "order_details.html", order=order, subtotal=subtotal
+    )
 
 
 def get_user_data(user_id):
@@ -875,11 +911,12 @@ def calculate_user_stats(orders):
         "total_items": total_items,
     }
 
+
 def add_phone_number_column():
     """Run this once to alter the table"""
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute('ALTER TABLE users ADD COLUMN phone_number TEXT;')
+    cursor.execute("ALTER TABLE users ADD COLUMN phone_number TEXT;")
     conn.commit()
     conn.close()
 
