@@ -300,8 +300,8 @@
     <!-- Top-right logo and profile menu -->
     <div class="top-right">
         <div class="profile" onclick="toggleDropdown()">
-            <div class="user-name">{{ username }} &nbsp;</div>
-            <i class="fas fa-user-circle profile-icon"></i>
+            <div class="user-name" style="font-size: 1.2rem; font-weight:bold">{{ username }} &nbsp;</div>
+            <i class="fas fa-user-circle profile-icon" style="font-size: 1.8rem;"></i>
             <div class="dropdown">
                 <a href="{{ url_for('home') }}">Home</a>
                 {% if session.get("user_id") %}
