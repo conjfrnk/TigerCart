@@ -874,8 +874,9 @@ def calculate_user_stats(orders):
         "total_spent": round(total_spent, 2),
         "total_items": total_items,
     }
-# Run this once to alter the table
+
 def add_phone_number_column():
+    """Run this once to alter the table"""
     conn = get_user_db_connection()
     cursor = conn.cursor()
     cursor.execute('ALTER TABLE users ADD COLUMN phone_number TEXT;')
