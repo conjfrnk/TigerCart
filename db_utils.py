@@ -20,7 +20,7 @@ def update_order_claim_status(
 
     try:
         cursor.execute(
-            "UPDATE orders SET status = 'claimed', claimed_by = ? WHERE id = ?",
+            "UPDATE orders SET status = 'CLAIMED', claimed_by = ? WHERE id = ?",
             (user_id, delivery_id),
         )
         conn.commit()
