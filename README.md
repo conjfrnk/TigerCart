@@ -42,5 +42,5 @@
 - [X] Category ribbon
 - [X] Favorite items
 - [X] Improve efficiency (Fix the reloading after checking checklist)
-- [ ] Improve UI
+- [X] Improve UI
 - [ ] Smooth out UX
