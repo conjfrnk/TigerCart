@@ -1,19 +1,28 @@
-<!-- templates/shop.html -->
+<!-- This is where the shopper can select what items they want -->
 
 {% extends "base.html" %}
 {% block title %}Shop - TigerCart{% endblock %}
 
 {% block content %}
-    <h1>Select a Category</h1>
+
+    <h1><u>Shop</u></h1>
     <hr color="#ff5722">
-    <h2><u>Categories</u></h2>
-    <a href="{{ url_for('category_view', category='drinks') }}">Drinks</a>
-    <br>
-    <a href="{{ url_for('category_view', category='food') }}">Food</a>
-    <br>
-    <a href="{{ url_for('category_view', category='other') }}">Other</a>
-    <br>
-    <br>
+    <!-- Category Ribbon -->
+    <div class="category-ribbon">
+        <div class="categories">
+            {% for category in categories %}
+                <button class="category-button" data-category="{{ category }}">{{ category.capitalize() }}</button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Items Container -->
+    <div id="items-container">
+        <!-- Items will be loaded here dynamically -->
+        <p>Select a category to view items.</p>
+    </div>
+
+    <!-- Current Cart -->
     <hr color="#ff5722">
     <h2><u>Current Cart</u></h2>
     <a href="{{ url_for('cart_view') }}">
@@ -27,4 +36,87 @@
         <p><strong>Status:</strong> {{ current_order['status'] }}</p>
         <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
     {% endif %}
+
+    <!-- JavaScript to handle category selection and item loading -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoryButtons = document.querySelectorAll('.category-button');
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const category = this.getAttribute('data-category');
+                    loadCategoryItems(category);
+
+                    // Highlight the selected category
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        });
+
+        function loadCategoryItems(category) {
+            fetch(`{{ url_for('get_category_items') }}?category=${encodeURIComponent(category)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const itemsContainer = document.getElementById('items-container');
+                    itemsContainer.innerHTML = '';
+
+                    if (data.items && Object.keys(data.items).length > 0) {
+                        const table = document.createElement('table');
+                        table.classList.add('items-table');
+
+                        // Table header
+                        const thead = document.createElement('thead');
+                        thead.innerHTML = `
+                            <tr>
+                                <th>Item</th>
+                                <th>Price ($)</th>
+                                <th>Add to Cart</th>
+                            </tr>
+                        `;
+                        table.appendChild(thead);
+
+                        // Table body
+                        const tbody = document.createElement('tbody');
+                        for (const [itemId, item] of Object.entries(data.items)) {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${item.name}</td>
+                                <td>${item.price}</td>
+                                <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
+                            `;
+                            tbody.appendChild(tr);
+                        }
+                        table.appendChild(tbody);
+
+                        itemsContainer.appendChild(table);
+                    } else {
+                        itemsContainer.innerHTML = '<p>No items found in this category.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching category items:', error);
+                    alert('Failed to load items.');
+                });
+        }
+
+        function addToCart(itemId) {
+            fetch(`/add_to_cart/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
+            }).then(response => {
+                if (response.ok) {
+                    alert('Item added to cart!');
+                } else {
+                    response.json().then(data => alert('Error: ' + data.error));
+                }
+            }).catch(error => {
+                console.error('Error adding to cart:', error);
+                alert('Failed to add item to cart.');
+            });
+        }
+    </script>
 {% endblock %}
+
