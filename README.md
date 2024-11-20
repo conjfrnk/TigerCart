@@ -28,7 +28,7 @@
 - [X] Edge cases (if item not found)
 - [X] Settings page
 - [ ] Mobile-first category ribbon with population
-- [ ] User favorite items
+- [X] User favorite items
 - [ ] Deliverer hide "declined" orders
 - [X] Connect timeline
 - [ ] Improve efficiency (pages should not need to be refreshed to see changes)
@@ -40,7 +40,7 @@
 - [X] Fix pylint issues
 - [ ] Real items, not placeholders
 - [X] Category ribbon
-- [ ] Favorite items
+- [X] Favorite items
 - [X] Improve efficiency (Fix the reloading after checking checklist)
 - [ ] Improve UI
 - [ ] Smooth out UX
