@@ -35,17 +35,9 @@
 - [ ] Improve UI (timeline mostly)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
-## For 11/20
-
-- [X] Fix pylint issues
+## For 12/6
 - [ ] Real items, not placeholders
-- [X] Category ribbon
-- [X] Favorite items
-- [X] Improve efficiency (Fix the reloading after checking checklist)
-- [X] Improve UI
-- [ ] Smooth out UX
-
-## To-do from 11/20
 - [ ] Items not in stock
 - [ ] MOBILE MOBILE MOBILE
+- [ ] Smooth out UX
 - [ ] Rating system (?)
