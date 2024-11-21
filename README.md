@@ -44,3 +44,8 @@
 - [X] Improve efficiency (Fix the reloading after checking checklist)
 - [X] Improve UI
 - [ ] Smooth out UX
+
+## To-do from 11/20
+- [ ] Items not in stock
+- [ ] MOBILE MOBILE MOBILE
+- [ ] Rating system (?)
