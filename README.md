@@ -41,6 +41,7 @@
 - [ ] MOBILE MOBILE MOBILE
 - [ ] Smooth out UX
 - [ ] Rating system (?)
+- [ ] Eye-catching website title w/ hyperlink (which takes users back to home page)
 
 ## Current Bugs
 - [ ] Deliveries not appearing
