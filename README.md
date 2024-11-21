@@ -41,3 +41,8 @@
 - [ ] MOBILE MOBILE MOBILE
 - [ ] Smooth out UX
 - [ ] Rating system (?)
+
+## Current Bugs
+- [ ] Deliveries not appearing
+- [ ] Back button malfunctions in some cases
+- [ ] Forward button malfunctions in some cases
