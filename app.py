@@ -883,6 +883,10 @@ def delivery_timeline(delivery_id):
 @app.route("/order_details/<int:order_id>")
 def order_details(order_id):
     """Display details of a specific order."""
+    current_username = authenticate()
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
@@ -904,7 +908,7 @@ def order_details(order_id):
     )
 
     return render_template(
-        "order_details.html", order=order, subtotal=subtotal
+        "order_details.html", order=order, subtotal=subtotal, username=current_username
     )
 
 
