@@ -4,7 +4,26 @@
 {% block title %}Profile - TigerCart{% endblock %}
 
 {% block content %}
-<h1>Welcome, {{ username }}!</h1>
+<h1>Your Profile</h1>
+
+<hr color="#ff5722">
+
+<h2><u>Your Contact Information</u></h2>
+<ul>
+    <li><strong>User ID:</strong> {{ username }}</li>
+    
+    {% if venmo_handle %}
+        <li><strong>Venmo Username:</strong> {{ venmo_handle }}</li>
+    {% else %}
+        <li><strong>Venmo Username:</strong> N/A</li>
+    {% endif %}
+    
+    {% if phone_number %}
+        <li><strong>Phone Number:</strong> {{ phone_number }}</li>
+    {% else %}
+        <li><strong>Phone Number:</strong> N/A</li>
+    {% endif %}
+</ul>
 
 <hr color="#ff5722">
 
@@ -17,7 +36,7 @@
 
 <hr color="#ff5722">
 
-<h2><u>Order History</u></h2>
+<h2><u>Your Order History</u></h2>
 {% if orders %}
     <table style="border: 1px solid black; border-collapse: collapse;" align="center">
         <thead style="border: 1px solid black;">

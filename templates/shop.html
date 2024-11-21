@@ -71,6 +71,7 @@
                                 <th>Item</th>
                                 <th>Price ($)</th>
                                 <th>Add to Cart</th>
+                                <th>Add to Favorites</th>
                             </tr>
                         `;
                         table.appendChild(thead);
@@ -82,9 +83,10 @@
                             const isFavorite = item.is_favorite;
                             
                             tr.innerHTML = `
-                                <td>${item.name} <i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
+                                <td>${item.name}</td>
                                 <td>${item.price}</td>
                                 <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
+                                <td><i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
                             `;
                             
                             // Add event listener ot heart icon
