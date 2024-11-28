@@ -44,4 +44,4 @@
 ## Current Bugs
 - [X] Deliveries not appearing
 - [ ] Back button malfunctions in some cases
-- [ ] Forward button malfunctions in some cases
+- [X] Forward button malfunctions in some cases
