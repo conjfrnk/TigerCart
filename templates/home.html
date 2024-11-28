@@ -5,7 +5,13 @@
 
 {% block content %}
     <h1>Welcome to TigerCart, {{ username }}!</h1>
-    <p>What would you like to do?</p>
+    <p>TigerCart is an application that enbles users to place orders from the U-Store on University Place, and have them delivered
+        to any on-campus location for a nominal fee. 
+    </p>
+    <p>
+        Select 'Shop' if you would like to place an order, or "Delliver" if you would 
+        like to deliver an order.
+    </p>
     <a href="{{ url_for('shop') }}">Shop</a>
     <a href="{{ url_for('deliver') }}">Deliver</a>
 
