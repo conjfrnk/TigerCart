@@ -580,7 +580,9 @@ def deliver():
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'")
+    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED' AND user_id != ?",
+                   (user_id,),
+                   )
     available_deliveries = cursor.fetchall()
 
     cursor.execute(
