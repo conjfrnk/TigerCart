@@ -376,13 +376,6 @@
         }
     </script>
 
-    <script>
-        function goForward() {
-            if (document.referrer && document.referrer.includes(window.location.hostname)) {
-                window.history.forward();
-        }
-    </script>
-
     <!-- Include common scripts -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
