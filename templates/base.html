@@ -110,7 +110,7 @@
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            margin-top: 40px;
+            margin-top: 80px;
             align-items: flex-start;
             min-width: 300px;
             width: 60%;
@@ -289,7 +289,7 @@
 </script>
 <body>
     <!-- Top-left back button -->
-    {% if request.endpoint != 'login' %}
+    {% if (request.endpoint != 'login') and (request.endpoint != 'home') %}
         <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-arrow">
             <svg width="24" height="24" viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
