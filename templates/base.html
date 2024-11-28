@@ -44,24 +44,6 @@
             display: block;
         }
 
-        .forward-arrow {
-            position: fixed;
-            top: 10px;
-            left: 80px;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .forward-arrow img {
-            display: block
-        }
 
         .top-right {
             position: fixed;
@@ -315,14 +297,6 @@
         </a>
     {% endif %}
 
-    <!-- Top-left forward button -->
-     {% if request.endpoint != 'login' %}
-    <a href = "javascript:history.forward()" class="forward-arrow">
-        <svg width="24" height="24" viewBox="0 0 24 24" transform="scale(-1 1)">
-            <path d="M14 18l-6-6 6-6" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </a>
-    {% endif %}
 
     <!-- Top-right logo and profile menu -->
     <div class="top-right">
