@@ -5,13 +5,17 @@
 
 {% block content %}
     <h1>Welcome to TigerCart, {{ username }}!</h1>
-    <p>TigerCart is an application that enbles users to place orders from the U-Store on University Place, and have them delivered
-        to any on-campus location for a nominal fee. 
+    <p>TigerCart is your go-to app for ordering from the U-Store on University Place. 
+        With just a few clicks, you can have your items delivered to any on-campus 
+        location for a nominal delivery fee.
     </p>
     <p>
-        Select 'Shop' if you would like to place an order, or "Delliver" if you would 
-        like to deliver an order.
+        If this is your first time on TigerCart, please click on your netid in the top right
+        corner, navigate to 'Settings', and input your Venmo handle and phone number.
     </p>
+    <p>Choose <strong>'Shop'</strong> to place an order or <strong>'Deliver'</strong> 
+        to join our team of campus delivery partners.</p>
+
     <a href="{{ url_for('shop') }}">Shop</a>
     <a href="{{ url_for('deliver') }}">Deliver</a>
 
