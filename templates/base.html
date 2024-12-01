@@ -290,7 +290,7 @@
 </script>
 <body>
     <!-- Top-left back button -->
-    {% if (request.endpoint != 'login') and (request.endpoint != 'home') %}
+    {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') %}
         <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-arrow">
             <svg width="24" height="24" viewBox="0 0 24 24">
                 <path d="M15 18l-6-6 6-6" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
