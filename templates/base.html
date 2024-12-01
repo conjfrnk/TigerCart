@@ -10,7 +10,7 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+            background: linear-gradient(135deg, #f8ae7d, #fd8240);
             color: #333;
             margin: 0;
             height: 100vh;
@@ -21,14 +21,30 @@
 
         h1 {
             font-size: 3em;
-            color: #ff5722;
+            color: orange;
             margin-bottom: 20px;
+        }
+
+        /* Home Button */
+        .home-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 65px;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .back-arrow {
             position: fixed;
             top: 50px;
-            left: 300px;
+            left: 335px;
             width: 60px;
             height: 60px;
             background: rgba(255, 255, 255, 0.8);
@@ -298,12 +314,15 @@
         </a>
     {% endif %}
 
+    <!-- Home Button-->
+    <a href="{{ url_for('home') }}" class="home-button"><strong><span style="color: black;">T</span><span style="color: orange;">i</span><span style="color: black;">g</span><span style="color: orange;">e</span><span style="color: black;">r</span><span style="color: orange;">C</span><span style="color: black;">a</span><span style="color: orange;">r</span><span style="color: black;">t</span>
+    </strong></a>
 
     <!-- Top-right logo and profile menu -->
     <div class="top-right">
         <div class="profile" onclick="toggleDropdown()">
             <div class="user-name" style="font-size: 1.2rem; font-weight:bold">{{ username }} &nbsp;</div>
-            <i class="fas fa-user-circle profile-icon" style="font-size: 1.8rem;"></i>
+            <i class="fas fa-bars profile-icon" style="font-size: 1.8rem;"></i>
             <div class="dropdown">
                 <a href="{{ url_for('home') }}">Home</a>
                 {% if session.get("user_id") %}

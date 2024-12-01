@@ -5,13 +5,20 @@
 
 {% block content %}
     <h1>Welcome to TigerCart, {{ username }}!</h1>
-    <p>TigerCart is an application that enbles users to place orders from the U-Store on University Place, and have them delivered
-        to any on-campus location for a nominal fee. 
+    <hr>
+    <h2><u>Description</u></h2>
+    <p align="left"><strong>TigerCart</strong> is an application that enables users to place orders from Princeton's on-campus
+        University Store and have them delivered
+        to any on-campus location for the original price and a small (10%) delivery fee. 
+        Alternatively, users can claim orders and deliver them to their designated on-campus locations
+        to earn money.
     </p>
-    <p>
-        Select 'Shop' if you would like to place an order, or "Delliver" if you would 
-        like to deliver an order.
-    </p>
+    <hr>
+    <h2><u>Instructions</u></h2>
+    <ol align="left">
+        <li>If you have not already done so, navigate to our "Settings" page and enter your contact information.</li>
+        <li>Select "Shop" if you would like to place an order or "Deliver" if you would like to deliver an order:</li>
+    </ol>
     <a href="{{ url_for('shop') }}">Shop</a>
     <a href="{{ url_for('deliver') }}">Deliver</a>
 

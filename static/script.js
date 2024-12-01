@@ -47,7 +47,7 @@ function updateQuantity(itemId, action) {
 }
 
 function deleteItem(itemId) {
-    if (confirm('Are you sure you want to remove this item from your cart?')) {
+    if (confirm('Are you sure that you want to remove this item from your cart?')) {
         fetch(`/delete_item/${itemId}`, {
             method: 'POST',
             headers: {

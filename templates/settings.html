@@ -4,13 +4,18 @@
 {% block title %}Settings - TigerCart{% endblock %}
 {% block content %}
 <h1>Settings</h1>
+<hr>
 <form method="POST" action="{{ url_for('settings') }}">
+    <h2><u>Contact Information</u></h2>
     <label for="venmo_handle">Venmo Username:</label>
     <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
     <br><br>
     <label for="phone_number">Phone Number:</label>
     <input type="tel" name="phone_number" id="phone_number" value="{{ phone_number }}" required pattern="[0-9]{10}">
     <br><br>
+    <hr>
+    <h2><u>Save Settings</u></h2>
+    <p>Click the button below to save your settings:</p>
     <button type="submit">Save</button>
 </form>
 {% endblock %}

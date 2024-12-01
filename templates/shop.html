@@ -5,10 +5,11 @@
 
 {% block content %}
 
-    <h1><u>Shop</u></h1>
-    <hr color="#ff5722">
+    <h1>Shop</h1>
+    <hr>
     <!-- Category Ribbon -->
      <h2><u>Categories</u></h2>
+     <p>Select the item category that you would like to view:</p>
     <div class="category-ribbon">
         <div class="categories">
             {% for category in categories %}
@@ -23,17 +24,19 @@
     </div>
 
     <!-- Current Cart -->
-    <hr color="#ff5722">
+    <hr>
     <h2><u>Current Cart</u></h2>
+    <p>Click the button below to view your current cart:</p>
     <a href="{{ url_for('cart_view') }}">
         <i class="fas fa-shopping-cart"></i> View Cart
     </a>
 
     {% if current_order %}
-        <hr color="#ff5722">
+        <hr>
         <h2><u>Your Current Order</u></h2>
         <p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
         <p><strong>Status:</strong> {{ current_order['status'] }}</p>
+        <p>Click the button below to view the timeline of your current order:</p>
         <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
     {% endif %}
 

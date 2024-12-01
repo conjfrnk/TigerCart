@@ -6,7 +6,7 @@
 {% block content %}
 <h1>Your Profile</h1>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Your Contact Information</u></h2>
 <ul>
@@ -25,7 +25,7 @@
     {% endif %}
 </ul>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Your Statistics</u></h2>
 <ul>
@@ -34,7 +34,7 @@
     <li><strong>Total Money Spent: </strong>${{ "%.2f"|format(stats.total_spent) }}</li>
 </ul>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Your Order History</u></h2>
 {% if orders %}
@@ -42,7 +42,7 @@
         <thead style="border: 1px solid black;">
             <tr>
                 <td style="border: 1px solid black;"><strong>Order ID</strong></td>
-                <td style="border: 1px solid black;"><strong>Date</strong></td>
+                <td style="border: 1px solid black;"><strong>Order Timestamp</strong></td>
                 <td style="border: 1px solid black;"><strong>Total Items</strong></td>
                 <td style="border: 1px solid black;"><strong>Status</strong></td>
                 <td style="border: 1px solid black;"><strong>Total ($)</strong></td>

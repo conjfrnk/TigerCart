@@ -6,15 +6,15 @@
 {% block content %}
 <h1>Order Details for Order #{{ order['id'] }}</h1>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Order Information</u></h2>
 <p><strong>Delivery Location:</strong> {{order['location']}}</p>
-<p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
-<p><strong>Status:</strong> {{ order['status'] }}</p>
+<p><strong>Order Timestamp:</strong> {{ order['timestamp'] }}</p>
+<p><strong>Order Status:</strong> {{ order['status'] }}</p>
 <p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Items</u></h2>
 <table style="border: 1px solid black; border-collapse: collapse;" align="center">
@@ -38,11 +38,11 @@
     </tbody>
 </table>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Cost</u></h2>
 <p><strong>Subtotal:</strong> ${{ "%.2f"|format(subtotal)}}</p>
 <p><strong>Delivery Fee (10%):</strong> ${{ "%.2f"|format(subtotal * 0.1)}}</p>
-<p><strong>Total:</strong> ${{ "%.2f"|format(subtotal * 1.1)}}</p>
+<h3 style="color: red;"><strong>Total:</strong> ${{ "%.2f"|format(subtotal * 1.1)}}</h3>
 
 {% endblock %}

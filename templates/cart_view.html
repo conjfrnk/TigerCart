@@ -6,7 +6,7 @@
 {% block content %}
 <h1>Your Cart</h1>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Items</u></h2>
 {% if cart.items() %}
@@ -41,21 +41,24 @@
                 {% endfor %}
             </tbody>
         </table>
-    </ul>
+    <p>Click the button below to add other items to your cart:</p>
+    <a href="{{ url_for('shop') }}">Shop</a>
 {% else %}
-    <p>There are no items in your cart.</p>
+    <p>There are no items in your cart. Please add items to your cart before you place an order:</p>
+    <a href="{{ url_for('shop') }}">Shop</a>
 {% endif %}
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Cost</u></h2>
 <p><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
 <p><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
-<p><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></p>
+<h3 style="color: red;"><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></h3>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Place Order</u></h2>
+<p>Click the button below to place your order:</p>
 <button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
 
 <!-- JavaScript for dynamic cart updates -->
