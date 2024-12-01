@@ -112,7 +112,7 @@ def shop():
     cursor = conn.cursor()
     cursor.execute(
         """SELECT * FROM orders
-        WHERE user_id = ? AND status IN ('PLACED', 'claimed')
+        WHERE user_id = ? AND status IN ('PLACED', 'CLAIMED')
         ORDER BY timestamp DESC LIMIT 1""",
         (user_id,),
     )
@@ -586,7 +586,7 @@ def deliver():
     available_deliveries = cursor.fetchall()
 
     cursor.execute(
-        "SELECT * FROM orders WHERE status = 'claimed' AND claimed_by = ?",
+        "SELECT * FROM orders WHERE status = 'CLAIMED' AND claimed_by = ?",
         (user_id,),
     )
     my_deliveries = cursor.fetchall()

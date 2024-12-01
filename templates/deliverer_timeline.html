@@ -26,24 +26,22 @@
 <hr color="#ff5722">
 
 <h2><u>Items</u></h2>
-<ul>
-    <table style="border: 1px solid black; border-collapse: collapse;" align="center">
-        <thead style="border: 1px solid black;">
-            <tr>
-                <td style="border: 1px solid black;"><strong>Item</strong></td>
-                <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-            </tr>
-        </thead>
-        <tbody style="border: 1px solid black;">
-            {% for item_id, item in order['cart'].items() %}
-            <tr>
-                <td style="border: 1px solid black;">{{ item['name'] }}</td>
-                <td style="border: 1px solid black;">{{ item['quantity'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</ul>
+<table style="border: 1px solid black; border-collapse: collapse; width: 100%;" align="center">
+    <thead style="border: 1px solid black;">
+        <tr>
+            <th style="border: 1px solid black; padding: 8px;"><strong>Item</strong></th>
+            <th style="border: 1px solid black; padding: 8px;"><strong>Quantity</strong></th>
+        </tr>
+    </thead>
+    <tbody style="border: 1px solid black;">
+        {% for item_id, item in order['cart'].items() %}
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">{{ item['name'] }}</td>
+            <td style="border: 1px solid black; padding: 8px;">{{ item['quantity'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <hr color="#ff5722">
 
@@ -53,61 +51,72 @@
     {% for step in steps %}
     {% set step_index = loop.index0 %}
     {% set previous_step_completed = step_index == 0 or order['timeline'].get(steps[step_index - 1], False) %}
-    <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
+    <div class="step {% if order['timeline'].get(step, False) %}complete{% endif %}" id="{{ step|lower|replace(' ', '-') }}-step">
+        <div class="circle">
+            {% if order['timeline'].get(step, False) %}✓{% endif %}
+        </div>
+        <span class="step-text">{{ step }}</span>
         <input type="checkbox"
                data-step="{{ step }}"
                {% if not previous_step_completed %}disabled{% endif %}
                {% if order['timeline'].get(step, False) %}checked{% endif %}
                onchange="updateChecklist('{{ step }}', this.checked)">
-        <span class="step-text">{{ step }}</span>
     </div>
     {% endfor %}
 </div>
 
 <script>
     function updateChecklist(step, checked) {
-        fetch('/update_checklist', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                order_id: "{{ order['id'] }}",
-                step: step,
-                checked: checked
-            })
-        }).then(response => response.json())
-          .then(data => {
-              if (!data.success) {
-                  alert(data.error || "Failed to update the checklist.");
-                  // Revert the checkbox state
-                  const checkbox = document.querySelector(`input[data-step="${step}"]`);
-                  if (checkbox) {
-                      checkbox.checked = !checked;
-                  }
-              } else {
-                  // Update the checkboxes based on the new timeline
-                  const timeline = data.timeline;
-                  const steps = {{ steps | tojson }};
-                  steps.forEach((stepName, index) => {
-                      const checkbox = document.querySelector(`input[data-step="${stepName}"]`);
-                      if (checkbox) {
-                          checkbox.checked = timeline[stepName];
-                          // Disable or enable the checkbox based on previous steps
-                          if (index === 0) {
-                              checkbox.disabled = false;
-                          } else {
-                              const previousStep = steps[index - 1];
-                              checkbox.disabled = !timeline[previousStep];
-                          }
-                      }
-                  });
+    fetch('/update_checklist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            order_id: "{{ order['id'] }}",
+            step: step,
+            checked: checked
+        })
+    }).then(response => response.json())
+      .then(data => {
+          if (!data.success) {
+              alert(data.error || "Failed to update the checklist.");
+              // Revert the checkbox state
+              const checkbox = document.querySelector(`input[data-step="${step}"]`);
+              if (checkbox) {
+                  checkbox.checked = !checked;
               }
-          }).catch(error => {
-              console.error("Error updating checklist:", error);
-              alert("An error occurred while updating the checklist.");
-          });
-    }
-</script>
+          } else {
+              // Update the timeline UI
+              const timeline = data.timeline;
+              const steps = {{ steps | tojson }};
+              steps.forEach((stepName, index) => {
+                  const stepDiv = document.querySelector(`div#${stepName.toLowerCase().replace(/ /g, '-')}-step`);
+                  const checkbox = stepDiv.querySelector('input');
+                  const circle = stepDiv.querySelector('.circle');
+                  
+                  if (timeline[stepName]) {
+                      stepDiv.classList.add('complete');
+                      circle.textContent = '✓';
+                  } else {
+                      stepDiv.classList.remove('complete');
+                      circle.textContent = '';
+                  }
 
+                  // Enable/disable the checkbox based on the previous step
+                  if (index === 0) {
+                      checkbox.disabled = false;
+                  } else {
+                      const previousStep = steps[index - 1];
+                      checkbox.disabled = !timeline[previousStep];
+                  }
+              });
+          }
+      }).catch(error => {
+          console.error("Error updating checklist:", error);
+          alert("An error occurred while updating the checklist.");
+      });
+}
+
+</script>
 {% endblock %}

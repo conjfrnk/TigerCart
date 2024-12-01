@@ -51,9 +51,10 @@
 <div class="timeline">
     {% set steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
-    <div class="step" id="{{ step|lower|replace(' ', '-') }}-step">
-        <input type="checkbox" disabled
-                {% if order['timeline'].get(step, False) %}checked{% endif %}>
+    <div class="step {% if order['timeline'].get(step, False) %}complete{% endif %}" id="{{ step|lower|replace(' ', '-') }}-step">
+        <div class="circle">
+            {% if order['timeline'].get(step, False) %}✓{% endif %}
+        </div>
         <span class="step-text">{{ step }}</span>
     </div>
     {% endfor %}
@@ -65,11 +66,18 @@
             .then(response => response.json())
             .then(data => {
                 const timeline = data.timeline;
-                const steps = ['Order Accepted', 'Venmo Payment Recieved', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'];
+                const steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'];
                 steps.forEach(step => {
-                    const checkbox = document.querySelector(`div#${step.toLowerCase().replace(/ /g, '-')}-step input`);
-                    if (checkbox) {
-                        checkbox.checked = timeline[step];
+                    const stepDiv = document.querySelector(`div#${step.toLowerCase().replace(/ /g, '-')}-step`);
+                    if (stepDiv) {
+                        const circle = stepDiv.querySelector('.circle');
+                        if (timeline[step]) {
+                            stepDiv.classList.add('complete');
+                            circle.textContent = '✓';
+                        } else {
+                            stepDiv.classList.remove('complete');
+                            circle.textContent = '';
+                        }
                     }
                 });
             })
