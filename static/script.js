@@ -126,3 +126,6 @@ function markStepComplete(stepId) {
     buttonElement.textContent = 'Completed';
     buttonElement.style.backgroundColor = 'green';
 }
+
+
+

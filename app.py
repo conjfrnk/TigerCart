@@ -968,6 +968,58 @@ def add_phone_number_column():
     conn.close()
 
 
+@app.route("/get_cart_count", methods=["GET"])
+def get_cart_count():
+    """API to return the current cart count for the logged-in user."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+
+    response = requests.get(
+    f"{SERVER_URL}/cart",
+    json={"user_id": user_id},  # Pass user_id in the body
+    timeout=REQUEST_TIMEOUT,
+    )
+
+
+    if response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to fetch cart data"}), 500
+
+    items_in_cart = len(response.json())
+
+    return jsonify({"success": True, "cart_count": items_in_cart})
+
+
+@app.route("/get_cart_status", methods=["GET"])
+def get_cart_status():
+    """API to return the current cart status for the logged-in user."""
+    user_id = session.get("user_id")  # Replace with your implementation if you're not using sessions
+    if not user_id:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+
+    # Connect to the database
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch the cart for the user
+    user = cursor.execute(
+        "SELECT cart FROM users WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    if user is None:
+        conn.close()
+        return jsonify({"success": False, "error": "User not found"}), 404
+
+    # Parse the cart from JSON
+    cart = json.loads(user["cart"]) if user["cart"] else {}
+    conn.close()
+
+    # Return the cart data as JSON
+    return jsonify({"success": True, "cart": cart})
+
+
+
+
+
 if __name__ == "__main__":
     init_user_db()
     app.run(host="localhost", port=8000, debug=get_debug_mode())

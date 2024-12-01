@@ -26,10 +26,18 @@
     <!-- Current Cart -->
     <hr>
     <h2><u>Current Cart</u></h2>
-    <p>Click the button below to view your current cart:</p>
-    <a href="{{ url_for('cart_view') }}">
-        <i class="fas fa-shopping-cart"></i> View Cart
-    </a>
+    <div class="cart-container">
+        <!-- Cart Icon with Badge -->
+        <div class="cart-icon">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-badge" id="cart-badge">0</span>
+        </div>
+    
+        <!-- View Cart Button -->
+        <div class="cart-button-container">
+            <a href="/cart_view" class="cart-link">View Cart</a>
+        </div>
+    </div>
 
     {% if current_order %}
         <hr>
@@ -178,6 +186,68 @@
                 alert('Failed to add item to cart.');
             });
         }
+
+        function fetchCartCount() {
+    fetch('/get_cart_count', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateCartCount(data.cart_count); // Use 'cart_count' as returned by the backend
+        }
+    })
+    .catch(error => console.error('Error fetching cart count:', error));
+}
+
+
+function updateCartCount(itemsInCart) {
+    const cartCountElement = document.getElementById('cart-count');
+    cartCountElement.textContent = itemsInCart;
+
+    if (itemsInCart > 0) {
+        cartCountElement.classList.add('active'); // Show the badge
+    } else {
+        cartCountElement.classList.remove('active'); // Hide the badge
+    }
+}
+
+    // Call fetchCartCount on page load
+    document.addEventListener('DOMContentLoaded', fetchCartCount);
+
+    function refreshCart() {
+    fetch("/get_cart_status") // Ensure this endpoint exists in your backend
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const cartBadge = document.querySelector("#cart-badge");
+
+                // Calculate total items in the cart
+                const totalItemsCount = Object.values(data.cart).reduce((total, item) => total + item.quantity, 0);
+
+                // Update the badge
+                cartBadge.textContent = totalItemsCount;
+
+                // Show or hide the badge
+                if (totalItemsCount > 0) {
+                    cartBadge.classList.add("active");
+                } else {
+                    cartBadge.classList.remove("active");
+                }
+            }
+        })
+        .catch(error => console.error("Error fetching cart status:", error));
+}
+
+        // Refresh cart every 10 seconds
+        setInterval(refreshCart, 10000);
+        // Initial load
+        refreshCart();
+
+
     </script>
 {% endblock %}
 
