@@ -11,30 +11,30 @@
 <h2><u>Items</u></h2>
 {% if cart.items() %}
     <ul>
-        <table id="cart-table" style="border: 1px solid black; border-collapse: collapse;" align="center">
-            <thead style="border: 1px solid black">
+        <table id="cart-table" style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
+            <thead style="border: 1px solid rgb(200, 200, 200);">
                 <tr>
-                    <td style="border: 1px solid black;"><strong>Item</strong></td>
-                    <td style="border: 1px solid black;"><strong>Price ($)</strong></td>
-                    <td style="border: 1px solid black;"><strong>Decrease Quantity</strong></td>
-                    <td style="border: 1px solid black;"><strong>Quantity</strong></td>
-                    <td style="border: 1px solid black;"><strong>Increase Quantity</strong></td>
-                    <td style="border: 1px solid black;"><strong>Remove Item</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250); padding: 10px;"><strong>Item</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);"><strong>Price ($)</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);"><strong>Decrease Quantity</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);"><strong>Quantity</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);"><strong>Increase Quantity</strong></td>
+                    <td style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);"><strong>Remove Item</strong></td>
                 </tr>
             </thead>
-            <tbody style="border: 1px solid black;">
+            <tbody style="border: 1px solid rgb(200, 200, 200);">
                 {% for item_id, details in cart.items() %}
                 <tr id="item-row-{{ item_id }}">
-                    <td style="border: 1px solid black;">{{ items[item_id].name }}</td>
-                    <td style="border: 1px solid black;">{{ items[item_id].price }}</td>
-                    <td style="border: 1px solid black;">
+                    <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ items[item_id].name }}</td>
+                    <td style="border: 1px solid rgb(200, 200, 200);">{{ items[item_id].price }}</td>
+                    <td style="border: 1px solid rgb(200, 200, 200);">
                         <button type="button" onclick="updateQuantity('{{ item_id }}', 'decrease')">-</button>
                     </td>
-                    <td style="border: 1px solid black;">{{ details.quantity }}</td>
-                    <td style="border: 1px solid black;">
+                    <td style="border: 1px solid rgb(200, 200, 200);">{{ details.quantity }}</td>
+                    <td style="border: 1px solid rgb(200, 200, 200);">
                         <button type="button" onclick="updateQuantity('{{ item_id }}', 'increase')">+</button>
                     </td>
-                    <td style="border: 1px solid black;">
+                    <td style="border: 1px solid rgb(200, 200, 200);">
                         <button type="button" class="delete-button" onclick="deleteItem('{{ item_id }}')">Delete</button>
                     </td>
                 </tr>
@@ -43,23 +43,23 @@
         </table>
     <p>Click the button below to add other items to your cart:</p>
     <a href="{{ url_for('shop') }}">Shop</a>
+    
+    <hr>
+
+    <h2><u>Cost</u></h2>
+    <p align="right" style="margin-right: 350px;"><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
+    <p align="right" style="margin-right: 350px;"><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
+    <h3 align="right" style="color: red; margin-right: 350px;"><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></h3>
+
+    <hr>
+
+    <h2><u>Place Order</u></h2>
+    <p>Click the button below to place your order:</p>
+    <button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
 {% else %}
-    <p>There are no items in your cart. Please add items to your cart before you place an order:</p>
+    <p>There are no items in your cart. Please add at least one item to your cart before you place an order:</p>
     <a href="{{ url_for('shop') }}">Shop</a>
 {% endif %}
-
-<hr>
-
-<h2><u>Cost</u></h2>
-<p><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
-<p><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
-<h3 style="color: red;"><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></h3>
-
-<hr>
-
-<h2><u>Place Order</u></h2>
-<p>Click the button below to place your order:</p>
-<button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
 
 <!-- JavaScript for dynamic cart updates -->
 <script>
@@ -132,12 +132,12 @@
                         const tr = document.createElement('tr');
                         tr.id = `item-row-${itemId}`;
                         tr.innerHTML = `
-                            <td style="border: 1px solid black;">${item.name}</td>
-                            <td style="border: 1px solid black;">${item.price}</td>
-                            <td style="border: 1px solid black;"><button type="button" onclick="updateQuantity('${itemId}', 'decrease')">-</button></td>
-                            <td style="border: 1px solid black;">${details.quantity}</td>
-                            <td style="border: 1px solid black;"><button type="button" onclick="updateQuantity('${itemId}', 'increase')">+</button></td>
-                            <td style="border: 1px solid black;"><button type="button" class="delete-button" onclick="deleteItem('${itemId}')">Delete</button></td>
+                            <td style="border: 1px solid rgb(200, 200, 200);">${item.name}</td>
+                            <td style="border: 1px solid rgb(200, 200, 200);">${item.price}</td>
+                            <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" onclick="updateQuantity('${itemId}', 'decrease')">-</button></td>
+                            <td style="border: 1px solid rgb(200, 200, 200);">${details.quantity}</td>
+                            <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" onclick="updateQuantity('${itemId}', 'increase')">+</button></td>
+                            <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" class="delete-button" onclick="deleteItem('${itemId}')">Delete</button></td>
                         `;
                         cartTableBody.appendChild(tr);
                     }

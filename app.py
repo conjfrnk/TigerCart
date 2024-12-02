@@ -59,39 +59,6 @@ def home():
     return render_template("home.html", username=username)
 
 
-@app.route("/settings", methods=["GET", "POST"])
-def settings():
-    """Handle user settings page for updating Venmo handle and phone number."""
-    username = authenticate()
-    user_id = username
-    conn = get_user_db_connection()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        venmo_handle = request.form.get("venmo_handle")
-        phone_number = request.form.get("phone_number")
-        cursor.execute(
-            "UPDATE users SET venmo_handle = ?, phone_number = ? WHERE user_id = ?",
-            (venmo_handle, phone_number, user_id),
-        )
-        conn.commit()
-        conn.close()
-        flash("Settings updated successfully.")
-        return redirect(url_for("settings"))
-
-    user = cursor.execute(
-        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()
-    conn.close()
-    return render_template(
-        "settings.html",
-        venmo_handle=user["venmo_handle"] if user else "",
-        phone_number=user["phone_number"] if user else "",
-        username=username,
-    )
-
-
 @app.route("/shop")
 def shop():
     """Display items available in the shop and current order if any."""
@@ -756,14 +723,35 @@ def update_checklist():
     return jsonify({"success": True, "timeline": timeline}), 200
 
 
-@app.route("/profile")
+@app.route("/profile", methods=["GET", "POST"])
 def profile():
     """Display the user's profile, order history, and statistics."""
-    current_username = authenticate()
+    username = authenticate()
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
-
     user_id = session["user_id"]
+
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        venmo_handle = request.form.get("venmo_handle")
+        phone_number = request.form.get("phone_number")
+        cursor.execute(
+            "UPDATE users SET venmo_handle = ?, phone_number = ? WHERE user_id = ?",
+            (venmo_handle, phone_number, user_id),
+        )
+        conn.commit()
+        conn.close()
+        flash("Profile updated successfully.")
+        return redirect(url_for("profile"))
+
+    user = cursor.execute(
+        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+
     user_profile = get_user_data(user_id)
     orders = get_user_orders(user_id)
     stats = calculate_user_stats(orders)
@@ -781,10 +769,12 @@ def profile():
 
     return render_template(
         "profile.html",
-        username=current_username,
+        username=username,
         orders=orders_with_totals,
         stats=stats,
         user_profile=user_profile,
+        venmo_handle=user["venmo_handle"] if user else "",
+        phone_number=user["phone_number"] if user else "",
     )
 
 

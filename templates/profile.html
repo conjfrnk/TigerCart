@@ -12,17 +12,15 @@
 <ul>
     <li><strong>User ID:</strong> {{ username }}</li>
     
-    {% if venmo_handle %}
-        <li><strong>Venmo Username:</strong> {{ venmo_handle }}</li>
-    {% else %}
-        <li><strong>Venmo Username:</strong> N/A</li>
-    {% endif %}
-    
-    {% if phone_number %}
-        <li><strong>Phone Number:</strong> {{ phone_number }}</li>
-    {% else %}
-        <li><strong>Phone Number:</strong> N/A</li>
-    {% endif %}
+    <form method="POST" action="{{ url_for('profile') }}">
+        <label for="venmo_handle"><strong>Venmo Username:</strong> @</label>
+        <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
+        <br><br>
+        <label for="phone_number"><strong>Phone Number:</strong></label>
+        <input type="tel" name="phone_number" id="phone_number" value="{{ phone_number }}" required pattern="[0-9]{10}">
+        <br><br>
+        <button type="submit">Save</button>
+    </form>
 </ul>
 
 <hr>
@@ -38,26 +36,26 @@
 
 <h2><u>Your Order History</u></h2>
 {% if orders %}
-    <table style="border: 1px solid black; border-collapse: collapse;" align="center">
-        <thead style="border: 1px solid black;">
+    <table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
+        <thead style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);">
             <tr>
-                <td style="border: 1px solid black;"><strong>Order ID</strong></td>
-                <td style="border: 1px solid black;"><strong>Order Timestamp</strong></td>
-                <td style="border: 1px solid black;"><strong>Total Items</strong></td>
-                <td style="border: 1px solid black;"><strong>Status</strong></td>
-                <td style="border: 1px solid black;"><strong>Total ($)</strong></td>
-                <td style="border: 1px solid black;"><strong>Details</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 10px;"><strong>Order ID</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Order Timestamp</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total Items</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Status</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total ($)</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Details</strong></td>
             </tr>
         </thead>
         <tbody>
             {% for order in orders %}
             <tr>
-                <td style="border: 1px solid black;">{{ order.id }}</td>
-                <td style="border: 1px solid black;">{{ order.timestamp }}</td>
-                <td style="border: 1px solid black;">{{ order.total_items }}</td>
-                <td style="border: 1px solid black;">{{ order.status }}</td>
-                <td style="border: 1px solid black;">{{ "%.2f"|format(order.total) }}</td>
-                <td style="border: 1px solid black;"><a href="{{ url_for('order_details', order_id=order.id) }}">View</a></td>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ order.id }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ order.timestamp }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ order.total_items }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ order.status }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(order.total) }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><a href="{{ url_for('order_details', order_id=order.id) }}">View</a></td>
             </tr>
             {% endfor %}
         </tbody>

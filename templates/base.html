@@ -41,22 +41,24 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
-        .back-arrow {
-            position: absolute;
-            top: 50px;
-            left: 335px;
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 540px;
             width: 60px;
             height: 60px;
             background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
+            border-radius: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            text-align: center;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
         }
 
-        .back-arrow img {
+        .back-button img {
             display: block;
         }
 
@@ -364,14 +366,6 @@
     .cart-link:hover {
         background-color: #0056b3;
     }
-
-    p {
-        text-align: left;
-    }
-
-
-
-
     </style>
 </head>
 <!-- Google tag (gtag.js) -->
@@ -385,11 +379,7 @@
 <body>
     <!-- Top-left back button -->
     {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') %}
-        <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-arrow">
-            <svg width="24" height="24" viewBox="0 0 24 24">
-                <path d="M15 18l-6-6 6-6" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </a>
+        <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-button"><strong><span style="color: black;">Go Back</span></strong></a>
     {% endif %}
 
     <!-- Home Button-->
@@ -406,7 +396,6 @@
                 {% if session.get("user_id") %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                 {% endif %}
-                <a href="{{ url_for('settings') }}">Settings</a> <!-- Updated to link to settings page -->
                 <a href="{{ url_for('auth.logoutcas') }}">Log Out</a>
 
             </div>

@@ -27,18 +27,18 @@
 
 <!-- Items Section -->
 <h2><u>Items</u></h2>
-<table style="border: 1px solid black; border-collapse: collapse; width: 100%;" align="center">
-    <thead style="border: 1px solid black;">
+<table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse; width: 100%;" align="center">
+    <thead style="border: 1px solid rgb(200, 200, 200);">
         <tr>
-            <th style="border: 1px solid black; padding: 8px;"><strong>Item</strong></th>
-            <th style="border: 1px solid black; padding: 8px;"><strong>Quantity</strong></th>
+            <th style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250); padding: 10px;"><strong>Item</strong></th>
+            <th style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250); padding: 10px;"><strong>Quantity</strong></th>
         </tr>
     </thead>
-    <tbody style="border: 1px solid black;">
+    <tbody style="border: 1px solid rgb(200, 200, 200);">
         {% for item_id, item in order['cart'].items() %}
         <tr>
-            <td style="border: 1px solid black; padding: 8px;">{{ item['name'] }}</td>
-            <td style="border: 1px solid black; padding: 8px;">{{ item['quantity'] }}</td>
+            <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ item['name'] }}</td>
+            <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ item['quantity'] }}</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -48,7 +48,8 @@
 
 <!-- Timeline Section -->
 <h2><u>Timeline</u></h2>
-<div class="timeline">
+<p style="color: rgb(250, 100, 100);">WARNING: Your order may not get claimed by anyone!</p>
+<div class="timeline" style="margin-left: 300px;">
     {% set steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
     <div class="step {% if order['timeline'].get(step, False) %}complete{% endif %}" id="{{ step|lower|replace(' ', '-') }}-step">
