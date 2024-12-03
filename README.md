@@ -38,7 +38,7 @@
 - [ ] Smooth out UX
 - [ ] Rating system (?)
 - [X] Eye-catching website title w/ hyperlink (which takes users back to home page)
-- [ ] Stylize all tables to be like those that appear upon clicking a category in the categories ribbon on the "shop" page
+- [X] Stylize all tables to be like those that appear upon clicking a category in the categories ribbon on the "shop" page
 - [ ] Add Ms. Spraragen's UX/UI design ideas
 
 ## Current Bugs
