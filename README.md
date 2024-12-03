@@ -25,9 +25,9 @@
 - [X] User favorite items
 - [ ] Real items, not placeholders
 - [ ] Live U-Store data
-- [ ] Mobile-first category ribbon with population
+- [X] Mobile-first category ribbon with population
 - [ ] Deliverer hide "declined" orders
-- [ ] Improve efficiency (pages should not need to be refreshed to see changes)
+- [X] Improve efficiency (pages should not need to be refreshed to see changes)
 - [ ] Improve UI (timeline mostly)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
@@ -43,5 +43,5 @@
 
 ## Current Bugs
 - [X] Deliveries not appearing
-- [ ] Back button malfunctions in some cases
+- [ ] Back button malfunctions in some cases (TODO: add *intuitive* back button things when the auto-detect fails)
 - [X] Forward button malfunctions in some cases

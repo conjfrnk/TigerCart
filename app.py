@@ -44,7 +44,8 @@ def get_user_data(user_id):
     conn = get_user_db_connection()
     cursor = conn.cursor()
     user = cursor.execute(
-        "SELECT * FROM users WHERE user_id = ?", (user_id,)
+        "SELECT * FROM users WHERE user_id = ?",
+        (user_id,)
     ).fetchone()
     conn.close()
     return user
@@ -105,7 +106,8 @@ def home():
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT OR IGNORE INTO users (user_id, name) VALUES (?, ?)",
+        """INSERT OR IGNORE INTO users (user_id, name, cart)
+        VALUES (?, ?, '{}')""",
         (session["user_id"], username),
     )
     conn.commit()
@@ -118,11 +120,18 @@ def home():
 def shop():
     """Display items available in the shop and current order if any."""
     username = authenticate()
-    response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-    )
-    sample_items = response.json()
-    categories = set(item["category"] for item in sample_items.values())
+    try:
+        response = requests.get(
+            f"{SERVER_URL}/items",
+            timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+        sample_items = response.json()
+        categories = set(item["category"] for item in sample_items.values())
+    except (requests.RequestException, ValueError) as e:
+        logging.error("Error fetching shop items: %s", str(e))
+        flash("Unable to load shop items. Please try again later.")
+        return redirect(url_for("home"))
 
     user_id = session.get("user_id")
     if not user_id:
@@ -155,7 +164,8 @@ def get_category_items():
         return jsonify({"error": "Category not specified"}), 400
 
     response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     all_items = response.json()
 
@@ -165,23 +175,21 @@ def get_category_items():
         if v.get("category") == category
     }
 
-    user_id = session.get("user_id")
+    user_id = session.get('user_id')
     favorite_item_ids = set()
     if user_id:
         conn = get_user_db_connection()
         cursor = conn.cursor()
         cursor.execute(
             "SELECT item_id FROM favorites WHERE user_id = ?",
-            (user_id,),
+            (user_id,)
         )
         favorite_items = cursor.fetchall()
         conn.close()
-        favorite_item_ids = {
-            str(row["item_id"]) for row in favorite_items
-        }
+        favorite_item_ids = {str(row['item_id']) for row in favorite_items}
 
     for item_id_str, item in items_in_category.items():
-        item["is_favorite"] = item_id_str in favorite_item_ids
+        item['is_favorite'] = item_id_str in favorite_item_ids
 
     return jsonify({"items": items_in_category})
 
@@ -227,9 +235,7 @@ def shopper_timeline():
         return "No orders found."
 
     order_dict = dict(order)
-    order_dict["timeline"] = json.loads(
-        order_dict.get("timeline", "{}")
-    )
+    order_dict["timeline"] = json.loads(order_dict.get("timeline", "{}"))
     order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
 
     return render_template(
@@ -246,7 +252,8 @@ def category_view(category):
     """Display items in a specific category."""
     username = authenticate()
     response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     sample_items = response.json()
     items_in_category = {
@@ -270,7 +277,8 @@ def cart_view():
         return redirect(url_for("home"))
 
     items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
@@ -331,12 +339,9 @@ def delete_item(item_id):
     )
 
     if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to delete item"}
-            ),
-            500,
-        )
+        return jsonify(
+            {"success": False, "error": "Failed to delete item"}
+        ), 500
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
@@ -346,7 +351,8 @@ def delete_item(item_id):
     cart = cart_response.json()
 
     items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     items = items_response.json()
 
@@ -416,25 +422,18 @@ def update_cart(item_id, action):
                 timeout=REQUEST_TIMEOUT,
             )
         else:
-            return (
-                jsonify(
-                    {"success": False, "error": "Item not in cart"}
-                ),
-                400,
-            )
+            return jsonify(
+                {"success": False, "error": "Item not in cart"}
+            ), 400
     else:
-        return (
-            jsonify({"success": False, "error": "Invalid action"}),
-            400,
-        )
+        return jsonify(
+            {"success": False, "error": "Invalid action"}
+        ), 400
 
     if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to update cart"}
-            ),
-            500,
-        )
+        return jsonify(
+            {"success": False, "error": "Failed to update cart"}
+        ), 500
 
     return jsonify({"success": True})
 
@@ -444,10 +443,9 @@ def get_cart_data():
     """Return the current cart data and totals."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
@@ -455,16 +453,14 @@ def get_cart_data():
         timeout=REQUEST_TIMEOUT,
     )
 
-    if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to fetch cart data"}
-            ),
-            500,
-        )
+    if cart_response.status_code != 200:
+        return jsonify(
+            {"success": False, "error": "Failed to fetch cart data"}
+        ), 500
 
     items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     items = items_response.json()
 
@@ -496,7 +492,8 @@ def order_status(order_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT timeline FROM orders WHERE id = ?", (order_id,)
+        "SELECT timeline FROM orders WHERE id = ?",
+        (order_id,)
     )
     order = cursor.fetchone()
     conn.close()
@@ -538,7 +535,8 @@ def place_order():
     user_conn = get_user_db_connection()
     user_cursor = user_conn.cursor()
     user = user_cursor.execute(
-        "SELECT cart FROM users WHERE user_id = ?", (user_id,)
+        "SELECT cart FROM users WHERE user_id = ?",
+        (user_id,)
     ).fetchone()
     cart = json.loads(user["cart"]) if user and user["cart"] else {}
 
@@ -546,7 +544,8 @@ def place_order():
         return jsonify({"error": "Cart is empty"}), 400
 
     items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/items",
+        timeout=REQUEST_TIMEOUT
     )
     items = items_response.json()
 
@@ -587,7 +586,8 @@ def place_order():
     conn.close()
 
     user_cursor.execute(
-        "UPDATE users SET cart = '{}' WHERE user_id = ?", (user_id,)
+        "UPDATE users SET cart = '{}' WHERE user_id = ?",
+        (user_id,)
     )
 
     user_conn.commit()
@@ -617,9 +617,7 @@ def deliver():
         (user_id,),
     ).fetchall()
 
-    available_deliveries = [
-        dict(delivery) for delivery in available_deliveries
-    ]
+    available_deliveries = [dict(delivery) for delivery in available_deliveries]
     my_deliveries = [dict(delivery) for delivery in my_deliveries]
 
     for delivery in available_deliveries + my_deliveries:
@@ -627,9 +625,7 @@ def deliver():
         subtotal = sum(
             item["quantity"] * item["price"] for item in cart.values()
         )
-        delivery["earnings"] = round(
-            subtotal * DELIVERY_FEE_PERCENTAGE, 2
-        )
+        delivery["earnings"] = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
 
     conn.close()
 
@@ -646,7 +642,8 @@ def delivery_details(delivery_id):
     """Display details of a specific delivery."""
     current_username = authenticate()
     response = requests.get(
-        f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
+        f"{SERVER_URL}/delivery/{delivery_id}",
+        timeout=REQUEST_TIMEOUT
     )
     if response.status_code == 200:
         delivery = response.json()
@@ -666,9 +663,7 @@ def accept_delivery(delivery_id):
         return redirect(url_for("auth.login"))
 
     update_order_claim_status(user_id, delivery_id)
-    return redirect(
-        url_for("deliverer_timeline", delivery_id=delivery_id)
-    )
+    return redirect(url_for("deliverer_timeline", delivery_id=delivery_id))
 
 
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
@@ -693,10 +688,9 @@ def update_checklist():
 
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
     conn = get_main_db_connection()
     cursor = conn.cursor()
@@ -709,22 +703,15 @@ def update_checklist():
 
     if not order:
         conn.close()
-        return (
-            jsonify({"success": False, "error": "Order not found"}),
-            404,
-        )
+        return jsonify(
+            {"success": False, "error": "Order not found"}
+        ), 404
 
     if order["claimed_by"] != user_id:
         conn.close()
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "error": "Not authorized to update this order",
-                }
-            ),
-            403,
-        )
+        return jsonify(
+            {"success": False, "error": "Not authorized to update this order"}
+        ), 403
 
     timeline = json.loads(order["timeline"])
     steps = [
@@ -742,30 +729,24 @@ def update_checklist():
             previous_step = steps[step_index - 1]
             if not timeline.get(previous_step, False):
                 conn.close()
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": "Previous step must be completed first.",
-                        }
-                    ),
-                    400,
-                )
+                return jsonify(
+                    {
+                        "success": False,
+                        "error": "Previous step must be completed first."
+                    }
+                ), 400
     else:
         if any(
             timeline.get(steps[i], False)
             for i in range(step_index + 1, len(steps))
         ):
             conn.close()
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "Cannot uncheck step with completed next steps.",
-                    }
-                ),
-                400,
-            )
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "Cannot uncheck step with completed next steps."
+                }
+            ), 400
 
     timeline[step] = checked
     cursor.execute(
@@ -783,22 +764,18 @@ def add_favorite(item_id):
     """Add an item to the user's favorites."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
-    logging.info(
-        "Adding favorite: user_id=%s, item_id=%s", user_id, item_id
-    )
+    logging.info("Adding favorite: user_id=%s, item_id=%s", user_id, item_id)
 
     try:
         item_id = int(item_id)
     except ValueError:
-        return (
-            jsonify({"success": False, "error": "Invalid item ID"}),
-            400,
-        )
+        return jsonify(
+            {"success": False, "error": "Invalid item ID"}
+        ), 400
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -817,22 +794,18 @@ def remove_favorite(item_id):
     """Remove an item from the user's favorites."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
-    logging.info(
-        "Removing favorite: user_id=%s, item_id=%s", user_id, item_id
-    )
+    logging.info("Removing favorite: user_id=%s, item_id=%s", user_id, item_id)
 
     try:
         item_id = int(item_id)
     except ValueError:
-        return (
-            jsonify({"success": False, "error": "Invalid item ID"}),
-            400,
-        )
+        return jsonify(
+            {"success": False, "error": "Invalid item ID"}
+        ), 400
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -907,10 +880,9 @@ def get_cart_count():
     """Return the current cart count for the logged-in user."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
     response = requests.get(
         f"{SERVER_URL}/cart",
@@ -919,12 +891,9 @@ def get_cart_count():
     )
 
     if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to fetch cart data"}
-            ),
-            500,
-        )
+        return jsonify(
+            {"success": False, "error": "Failed to fetch cart data"}
+        ), 500
 
     items_in_cart = len(response.json())
     return jsonify({"success": True, "cart_count": items_in_cart})
@@ -935,24 +904,23 @@ def get_cart_status():
     """Return the current cart status for the logged-in user."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify(
+            {"success": False, "error": "User not logged in"}
+        ), 401
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
 
     user = cursor.execute(
-        "SELECT cart FROM users WHERE user_id = ?", (user_id,)
+        "SELECT cart FROM users WHERE user_id = ?",
+        (user_id,)
     ).fetchone()
 
     if user is None:
         conn.close()
-        return (
-            jsonify({"success": False, "error": "User not found"}),
-            404,
-        )
+        return jsonify(
+            {"success": False, "error": "User not found"}
+        ), 404
 
     cart = json.loads(user["cart"]) if user["cart"] else {}
     conn.close()
@@ -971,7 +939,10 @@ def deliverer_timeline(delivery_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE id = ?", (delivery_id,))
+    cursor.execute(
+        "SELECT * FROM orders WHERE id = ?",
+        (delivery_id,)
+    )
     order_row = cursor.fetchone()
 
     shopper_venmo = None
@@ -1018,7 +989,10 @@ def order_details(order_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    cursor.execute(
+        "SELECT * FROM orders WHERE id = ?",
+        (order_id,)
+    )
     order_row = cursor.fetchone()
     conn.commit()
     conn.close()
