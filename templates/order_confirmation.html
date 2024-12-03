@@ -4,7 +4,7 @@
 {% block title %}Order Confirmation - TigerCart{% endblock %}
 
 {% block content %}
-<h1>Confirm Your Order</h1>
+<h1>Order Confirmation</h1>
 <p>Are you sure that you would like to place this order?</p>
 <button onclick="placeOrder({{ items_in_cart | tojson }});">Yes</button>
 <button onclick="window.location.href='{{ url_for("cart_view") }}'">No</button>

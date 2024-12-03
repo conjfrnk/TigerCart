@@ -10,6 +10,7 @@
 
 <h2><u>Items</u></h2>
 {% if cart.items() %}
+    <p>Below are the items that are currently in your cart:</p>
     <ul>
         <table id="cart-table" style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
             <thead style="border: 1px solid rgb(200, 200, 200);">
@@ -41,8 +42,6 @@
                 {% endfor %}
             </tbody>
         </table>
-    <p>Click the button below to add other items to your cart:</p>
-    <a href="{{ url_for('shop') }}">Shop</a>
     
     <hr>
 
@@ -57,9 +56,14 @@
     <p>Click the button below to place your order:</p>
     <button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
 {% else %}
-    <p>There are no items in your cart. Please add at least one item to your cart before you place an order:</p>
-    <a href="{{ url_for('shop') }}">Shop</a>
+    <p>There are no items in your cart. Please add at least one item to your cart before you place an order!</p>
 {% endif %}
+
+<hr>
+
+<h2><strong><u>Continue Shopping</u></strong></h2>
+<p>Click the button below to continue shopping:</p>
+<a href="{{ url_for('shop') }}">Shop</a>
 
 <!-- JavaScript for dynamic cart updates -->
 <script>

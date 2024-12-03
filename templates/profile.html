@@ -27,9 +27,9 @@
 
 <h2><u>Your Statistics</u></h2>
 <ul>
-    <li><strong>Total Orders: </strong>{{ stats.total_orders }}</li>
-    <li><strong>Total Items Purchased: </strong>{{ stats.total_items }}</li>
-    <li><strong>Total Money Spent: </strong>${{ "%.2f"|format(stats.total_spent) }}</li>
+    <li><strong>Total Number of Orders Placed: </strong>{{ stats.total_orders }}</li>
+    <li><strong>Total Number of Items Purchased: </strong>{{ stats.total_items }}</li>
+    <li><strong>Total Amount of Money Spent: </strong>${{ "%.2f"|format(stats.total_spent * 1.1) }}</li>
 </ul>
 
 <hr>
@@ -43,7 +43,7 @@
                 <td style="border: 1px solid rgb(200, 200, 200);"><strong>Order Timestamp</strong></td>
                 <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total Items</strong></td>
                 <td style="border: 1px solid rgb(200, 200, 200);"><strong>Status</strong></td>
-                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total ($)</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total Cost ($)</strong></td>
                 <td style="border: 1px solid rgb(200, 200, 200);"><strong>Details</strong></td>
             </tr>
         </thead>
@@ -54,8 +54,8 @@
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.timestamp }}</td>
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.total_items }}</td>
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.status }}</td>
-                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(order.total) }}</td>
-                <td style="border: 1px solid rgb(200, 200, 200);"><a href="{{ url_for('order_details', order_id=order.id) }}">View</a></td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(order.total * 1.1) }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><a href="{{ url_for('order_details', order_id=order.id) }}">See More</a></td>
             </tr>
             {% endfor %}
         </tbody>

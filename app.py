@@ -525,12 +525,14 @@ def place_order():
         ),
     )
 
+    conn.commit()
+    conn.close()
+
     user_cursor.execute(
         "UPDATE users SET cart = '{}' WHERE user_id = ?", (user_id,)
     )
-    conn.commit()
+
     user_conn.commit()
-    conn.close()
     user_conn.close()
 
     return jsonify({"success": True}), 200
@@ -547,16 +549,16 @@ def deliver():
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED' AND user_id != ?",
-                   (user_id,),
-                   )
-    available_deliveries = cursor.fetchall()
+    available_deliveries = cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'").fetchall()
+    
+    # AND user_id != ?",
+    #                (user_id,),
+                #    ).fetchall()
 
-    cursor.execute(
+    my_deliveries = cursor.execute(
         "SELECT * FROM orders WHERE status = 'CLAIMED' AND claimed_by = ?",
         (user_id,),
-    )
-    my_deliveries = cursor.fetchall()
+    ).fetchall()
 
     available_deliveries = [
         dict(delivery) for delivery in available_deliveries
@@ -573,7 +575,6 @@ def deliver():
         )
 
     conn.close()
-    print(available_deliveries)
 
     return render_template(
         "deliver.html",
@@ -610,7 +611,7 @@ def accept_delivery(delivery_id):
     update_order_claim_status(user_id, delivery_id)
 
     return redirect(
-        url_for("delivery_timeline", delivery_id=delivery_id)
+        url_for("deliverer_timeline", delivery_id=delivery_id)
     )
 
 
@@ -826,9 +827,9 @@ def remove_favorite(item_id):
     return jsonify({"success": True}), 200
 
 
-@app.route("/delivery_timeline/<int:delivery_id>")
-def delivery_timeline(delivery_id):
-    """Display the delivery timeline for a specific delivery."""
+@app.route("/deliverer_timeline/<int:delivery_id>")
+def deliverer_timeline(delivery_id):
+    """Display the deliverer's timeline for a specific delivery."""
     current_username = authenticate()
     user_id = session.get("user_id")
     if not user_id:
@@ -1005,9 +1006,6 @@ def get_cart_status():
 
     # Return the cart data as JSON
     return jsonify({"success": True, "cart": cart})
-
-
-
 
 
 if __name__ == "__main__":

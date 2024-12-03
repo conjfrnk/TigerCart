@@ -6,48 +6,49 @@
 {% block content %}
 <h1>Delivery Details</h1>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Logistics</u></h2>
 
 <p><strong>Delivery Location:</strong> {{delivery.location}}</p>
-<p><strong>Timestamp:</strong> {{ delivery.timestamp }}</p>
-<p><strong>User ID:</strong> {{ delivery.user_id }}</p>
+<p><strong>Order Timestamp:</strong> {{ delivery.timestamp }}</p>
+<p><strong>Shopper ID:</strong> {{ delivery.user_id }}</p>
 <p><strong>Total Items:</strong> {{ delivery.total_items }}</p>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Items</u></h2>
 <ul>
-    <table style="border: 1px solid black; border-collapse: collapse;" align="center">
-        <thead style="border: 1px solid black;">
+    <table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
+        <thead style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);">
             <tr>
-                <td style="border: 1px solid black;"><strong>Item</strong></td>
-                <td style="border: 1px solid black;"><strong>Unit Price ($)</strong></td>
-                <td style="border: 1px solid black;"><strong>Quantity</strong></strogn></td>
-                <td style="border: 1px solid black;"><strong>Total Price ($)</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 10px;"><strong>Item</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Unit Price ($)</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Quantity</strong></strogn></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Total Price ($)</strong></td>
             </tr>    
         </thead>
-        <tbody style="border: 1px soli black;">
+        <tbody style="border: 1px soli rgb(200, 200, 200);">
             {% for item_id, item in delivery.cart.items() %}
             <tr>
-                <td style="border: 1px solid black;">{{item.name}}</td>
-                <td style="border: 1px solid black;">{{"%.2f"|format(item.price)}}</td>
-                <td style="border: 1px solid black;">{{item.quantity}}</td>
-                <td style="border: 1px solid black;">{{"%.2f"|format(item.total)}}</td>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{item.name}}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{"%.2f"|format(item.price)}}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{item.quantity}}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{"%.2f"|format(item.total)}}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </ul>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Cost</u></h2>
-<p><strong>Subtotal:</strong> ${{ "%.2f"|format(delivery.subtotal) }}</p>
-<p><strong>Earnings:</strong> ${{ "%.2f"|format(delivery.earnings) }}</p>
+<h3 align="right" style="color: red; margin-right: 300px;"><strong>Total (For Deliverer):</strong> ${{ "%.2f"|format(delivery.subtotal) }}</h3>
+<h3 align="right" style="color: green; margin-right: 300px;"><strong>Earnings (i.e. 10% Delivery Fee):</strong> ${{ "%.2f"|format(delivery.earnings) }}</h3>
+<h3 align="right" style="color: black; margin-right: 300px;"><strong>Total (For Shopper):</strong> ${{ "%.2f"|format(delivery.subtotal + delivery.earnings) }}</h3>
 
-<hr color="#ff5722">
+<hr>
 
 <!-- Accept and Decline Forms -->
 <div style="margin-top: 20px;">

@@ -335,16 +335,16 @@
     }
 
     .cart-badge {
-        position: absolute;
-        top: -10px;
-        right: -10px;
+        position: relative;
+        bottom: 57px;
+        right: -70px;
         background: red;
         color: white;
         font-size: 14px;
         font-weight: bold;
         border-radius: 50%;
         padding: 4px 8px;
-        display: none; /* Hidden by default */
+        display: none;
     }
 
     .cart-badge.active {
@@ -378,7 +378,7 @@
 </script>
 <body>
     <!-- Top-left back button -->
-    {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') %}
+    {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') and (request.endpoint != 'deliverer_timeline') %}
         <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-button"><strong><span style="color: black;">Go Back</span></strong></a>
     {% endif %}
 

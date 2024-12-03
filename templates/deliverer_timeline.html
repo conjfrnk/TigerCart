@@ -1,15 +1,15 @@
 <!-- This is where the deliverer must provide updates on the timeline-->
 
 {% extends "base.html" %}
-{% block title %}Delivery Timeline{% endblock %}
+{% block title %}Order Timeline - TigerCart{% endblock %}
 {% block content %}
-<h1>Delivery Timeline</h1>
+<h1>Timeline</h1>
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Logistics</u></h2>
 <p><strong>Delivery Location:</strong> {{ order['location'] }}</p>
-<p><strong>Timestamp:</strong> {{ order['timestamp'] }}</p>
+<p><strong>Order Timestamp:</strong> {{ order['timestamp'] }}</p>
 <p><strong>Shopper ID:</strong> {{ order['user_id'] }}</p>
 <p><strong>Total Items:</strong> {{ order['total_items'] }}</p>
 {% if shopper_venmo %}
@@ -23,30 +23,31 @@
     <p><strong>Shopper Phone:</strong> N/A</p>
 {% endif %}
 
-<hr color="#ff5722">
+<hr>
 
 <h2><u>Items</u></h2>
-<table style="border: 1px solid black; border-collapse: collapse; width: 100%;" align="center">
-    <thead style="border: 1px solid black;">
+<table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse; width: 100%;" align="center">
+    <thead style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);">
         <tr>
-            <th style="border: 1px solid black; padding: 8px;"><strong>Item</strong></th>
-            <th style="border: 1px solid black; padding: 8px;"><strong>Quantity</strong></th>
+            <th style="border: 1px solid rgb(200, 200, 200); padding: 10px;"><strong>Item</strong></th>
+            <th style="border: 1px solid rgb(200, 200, 200); padding: 10px;"><strong>Quantity</strong></th>
         </tr>
     </thead>
-    <tbody style="border: 1px solid black;">
+    <tbody style="border: 1px solid rgb(200, 200, 200);">
         {% for item_id, item in order['cart'].items() %}
         <tr>
-            <td style="border: 1px solid black; padding: 8px;">{{ item['name'] }}</td>
-            <td style="border: 1px solid black; padding: 8px;">{{ item['quantity'] }}</td>
+            <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ item['name'] }}</td>
+            <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ item['quantity'] }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
-<hr color="#ff5722">
+<hr>
 
-<h2><u>Timeline</u></h2>
-<div class="timeline">
+<h2><u>Status</u></h2>
+<p style="color: red;">NOTE: Please mark the steps promptly after you complete them so that the shopper is aware of the status of their order!</p>
+<div class="timeline" style="margin-left: 300px;">
     {% set steps = ['Order Accepted', 'Venmo Payment Received', 'Shopping in U-Store', 'Checked Out', 'On Delivery', 'Delivered'] %}
     {% for step in steps %}
     {% set step_index = loop.index0 %}

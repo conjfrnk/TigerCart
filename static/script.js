@@ -80,7 +80,7 @@ function placeOrder(itemsInCart) {
         .then(response => {
             if (response.ok) {
                 alert('Order placed successfully!');
-                window.location.href = '/shopper_timeline'; // change to /shopper_timeline
+                window.location.href = '/shopper_timeline';
             } else {
                 alert('Failed to place the order.');
             }
@@ -95,7 +95,7 @@ function acceptDelivery(deliveryId) {
         .then(response => {
             if (response.ok) {
                 alert('Delivery accepted');
-                window.location.href = '/timeline';  // Redirect to timeline or a different page
+                window.location.href = '/deliverer_timeline';
             } else {
                 alert('Failed to accept the delivery');
             }
