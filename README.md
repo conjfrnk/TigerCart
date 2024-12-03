@@ -28,7 +28,7 @@
 - [X] Mobile-first category ribbon with population
 - [ ] Deliverer hide "declined" orders
 - [X] Improve efficiency (pages should not need to be refreshed to see changes)
-- [ ] Improve UI (timeline mostly)
+- [ ] Improve UI (timeline for the most part)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
 ## For 12/06/2024
@@ -45,3 +45,4 @@
 - [X] Deliveries not appearing
 - [ ] Back button malfunctions in some cases (TODO: add *intuitive* back button things when the auto-detect fails)
 - [X] Forward button malfunctions in some cases
+- [ ] Excess lines in app.py --- move some stuff elsewhere
