@@ -33,7 +33,7 @@
 
 ## For 12/06/2024
 - [ ] Real items, not placeholders
-- [ ] Items not in stock
+- [ ] Items not in stock (likely not feasible)
 - [ ] MOBILE MOBILE MOBILE
 - [ ] Smooth out UX
 - [ ] Rating system (?)
