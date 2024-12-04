@@ -25,7 +25,7 @@ from database import (
     get_main_db_connection,
     get_user_db_connection,
     init_user_db,)
-from db_utils import update_order_claim_status
+from db_utils import update_order_claim_status, get_user_cart
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -848,21 +848,14 @@ def get_cart_status():
             jsonify({"success": False, "error": "User not logged in"}),
             401,)
 
-    conn = get_user_db_connection()
-    cursor = conn.cursor()
-
-    user = cursor.execute(
-        "SELECT cart FROM users WHERE user_id = ?", (user_id,)
-    ).fetchone()
+    user = get_user_cart(user_id)
 
     if user is None:
-        conn.close()
         return (
             jsonify({"success": False, "error": "User not found"}),
             404,)
 
     cart = json.loads(user["cart"]) if user["cart"] else {}
-    conn.close()
 
     return jsonify({"success": True, "cart": cart})
 

@@ -6,7 +6,7 @@ Database utility functions for shared database operations.
 """
 
 from typing import Union
-from database import get_main_db_connection
+from database import get_main_db_connection, get_user_db_connection
 
 
 def update_order_claim_status(
@@ -30,3 +30,13 @@ def update_order_claim_status(
         conn.commit()
     finally:
         conn.close()
+
+def get_user_cart(user_id):
+    """Fetches the cart for a user by user_id."""
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    user = cursor.execute(
+        "SELECT cart FROM users WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    conn.close()
+    return user
