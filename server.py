@@ -31,7 +31,7 @@ def manage_cart():
     """Logic to add/remove items and change quantities"""
     data = request.json
     user_id = data.get("user_id")
-    
+
     user = get_user_cart(user_id)
 
     if user is None:
