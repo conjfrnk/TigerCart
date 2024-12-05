@@ -40,10 +40,10 @@
 - [X] Eye-catching website title w/ hyperlink (which takes users back to home page)
 - [X] Stylize all tables to be like those that appear upon clicking a category in the categories ribbon on the "shop" page
 - [ ] Add Ms. Spraragen's UX/UI design ideas
+- [ ] Alert the user that they successfully updated their contact information if they enter a valid venmo username and/or phone number
 
 ## Current Bugs
 - [X] Deliveries not appearing
-- [ ] Back button malfunctions in some cases (TODO: add *intuitive* back button things when the auto-detect fails)
+- [X] Back button malfunctions in some cases (TODO: add *intuitive* back button things when the auto-detect fails)
 - [X] Forward button malfunctions in some cases
 - [ ] Excess lines in app.py --- move some stuff elsewhere
-- [ ] Alert the user that they successfully updated their contact information if they enter a valid venmo username and/or phone number
