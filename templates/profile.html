@@ -25,10 +25,18 @@
     
     <form method="POST" action="{{ url_for('profile') }}">
         <label for="venmo_handle"><strong>Venmo Username:</strong> @</label>
-        <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
+        {% if venmo_handle %}
+            <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
+        {% else %}
+            <input type="text" name="venmo_handle" id="venmo_handle" required>
+        {% endif %}
         <br><br>
         <label for="phone_number"><strong>Phone Number:</strong></label>
-        <input type="tel" name="phone_number" id="phone_number" value="{{ phone_number }}" required pattern="[0-9]{10}">
+        {% if phone_number %}
+            <input type="tel" name="phone_number" id="phone_number" value="{{ phone_number }}" required pattern="[0-9]{10}">
+        {% else %}
+            <input type="tel" name="phone_number" id="phone_number" required pattern="[0-9]{10}">
+        {% endif %}
         <br><br>
         <button type="submit">Save</button>
     </form>
