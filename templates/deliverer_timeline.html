@@ -53,11 +53,12 @@
     {% set step_index = loop.index0 %}
     {% set previous_step_completed = step_index == 0 or order['timeline'].get(steps[step_index - 1], False) %}
     <div class="step {% if order['timeline'].get(step, False) %}complete{% endif %}" id="{{ step|lower|replace(' ', '-') }}-step">
-        <div class="circle">
+        <div class="circle {% if order['timeline'].get(step, False) %}complete{% endif %}">
             {% if order['timeline'].get(step, False) %}✓{% endif %}
         </div>
         <span class="step-text">{{ step }}</span>
         <input type="checkbox"
+               class="big-checkbox"
                data-step="{{ step }}"
                {% if not previous_step_completed %}disabled{% endif %}
                {% if order['timeline'].get(step, False) %}checked{% endif %}

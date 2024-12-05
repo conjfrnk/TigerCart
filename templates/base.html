@@ -219,14 +219,14 @@
 }
 
 .step .circle {
-    width: 20px;
-    height: 20px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background-color: #ddd;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 12px;
+    font-size: 30px;
     color: white;
 }
 
@@ -239,6 +239,16 @@
     color: #333;
     margin-left: 10px;
 }
+
+.big-checkbox {
+    transform: scale(1.5); /* Increase the size of the checkbox */
+    cursor: pointer; /* Add a pointer cursor for better UX */
+  }
+
+  .big-checkbox:disabled {
+    opacity: 0.5; /* Dim the checkbox if it's disabled */
+    cursor: not-allowed; /* Change the cursor for disabled checkboxes */
+  }
 
 .step:last-child::before {
     display: none; /* Remove the line for the last step */
