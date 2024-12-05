@@ -24,12 +24,14 @@ def update_order_claim_status(
 
     try:
         cursor.execute(
-            "UPDATE orders SET status = 'CLAIMED', claimed_by = ? WHERE id = ?",
+            "UPDATE orders SET status =\
+            'CLAIMED', claimed_by = ? WHERE id = ?",
             (user_id, delivery_id),
         )
         conn.commit()
     finally:
         conn.close()
+
 
 def get_user_cart(user_id):
     """Fetches the cart for a user by user_id."""
