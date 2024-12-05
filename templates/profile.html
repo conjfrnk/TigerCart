@@ -36,6 +36,32 @@
 
 <hr>
 
+<h2><u>Your Favorite Items</u></h2>
+{% if favorites %}
+    <table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
+        <thead style="border: 1px solid rgb(200, 200, 200); background-color: rgb(250, 250, 250);">
+            <tr>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 10px;"><strong>Item Name</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Category</strong></td>
+                <td style="border: 1px solid rgb(200, 200, 200);"><strong>Price ($)</strong></td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in favorites %}
+            <tr>
+                <td style="border: 1px solid rgb(200, 200, 200); padding: 20px;">{{ item['name'] }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ item['category'] }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(item['price']) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>You have no favorite items yet.</p>
+{% endif %}
+
+<hr>
+
 <h2><u>Your Statistics</u></h2>
 <ul>
     <li><strong>Total Number of Orders Placed: </strong>{{ stats.total_orders }}</li>

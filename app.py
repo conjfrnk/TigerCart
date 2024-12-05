@@ -765,38 +765,57 @@ def remove_favorite(item_id):
     conn.close()
     return jsonify({"success": True}), 200
 
-
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
-    """Display the user's profile, order history, and statistics."""
     username = authenticate()
     if "user_id" not in session:
         return redirect(url_for("auth.login"))
     user_id = session["user_id"]
 
-    conn = get_user_db_connection()
-    cursor = conn.cursor()
+    # Connect to both databases
+    user_conn = get_user_db_connection()
+    main_conn = get_main_db_connection()
 
+    user_cursor = user_conn.cursor()
+    main_cursor = main_conn.cursor()
+
+    # Fetch user's venmo handle and phone number
     if request.method == "POST":
         venmo_handle = request.form.get("venmo_handle")
         phone_number = request.form.get("phone_number")
-        cursor.execute(
+        user_cursor.execute(
             """UPDATE users
             SET venmo_handle = ?, phone_number = ?
             WHERE user_id = ?""",
             (venmo_handle, phone_number, user_id),
         )
-        conn.commit()
-        conn.close()
+        user_conn.commit()
+        user_conn.close()
         flash("Profile updated successfully!")
         return redirect(url_for("profile"))
 
-    user = cursor.execute(
+    user = user_cursor.execute(
         "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
         (user_id,),
     ).fetchone()
-    conn.close()
 
+    # Fetch favorite item_ids
+    user_cursor.execute(
+        "SELECT item_id FROM favorites WHERE user_id = ?", (user_id,)
+    )
+    favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
+
+    # Fetch details for favorite items from items table
+    favorite_items = []
+    if favorite_item_ids:
+        placeholder = ",".join("?" for _ in favorite_item_ids)  # Create placeholders for IN clause
+        query = f"SELECT id, name, price, category FROM items WHERE id IN ({placeholder})"
+        favorite_items = main_cursor.execute(query, favorite_item_ids).fetchall()
+
+    user_conn.close()
+    main_conn.close()
+
+    # Fetch user data, orders, and stats
     user_profile = get_user_data(user_id)
     orders = get_user_orders(user_id)
     stats = calculate_user_stats(orders)
@@ -806,7 +825,8 @@ def profile():
         cart = json.loads(order["cart"])
         subtotal = sum(
             details.get("quantity", 0) * details.get("price", 0)
-            for item_id, details in cart.items())
+            for item_id, details in cart.items()
+        )
         order_data = dict(order)
         order_data["total"] = round(subtotal, 2)
         orders_with_totals.append(order_data)
@@ -818,7 +838,13 @@ def profile():
         stats=stats,
         user_profile=user_profile,
         venmo_handle=user["venmo_handle"] if user else "",
-        phone_number=user["phone_number"] if user else "",)
+        phone_number=user["phone_number"] if user else "",
+        favorites=favorite_items,  # Pass favorite items to the template
+    )
+
+
+
+
 
 
 @app.route("/get_cart_count", methods=["GET"])
