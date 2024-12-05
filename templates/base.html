@@ -43,8 +43,8 @@
 
         .back-button {
             position: absolute;
-            top: 55px;
-            left: 325px;
+            top: 40px;
+            left: 550px;
             width: 60px;
             height: 60px;
             background: rgba(255, 255, 255, 0.8);
@@ -378,8 +378,8 @@
 </script>
 <body>
     <!-- Top-left back button -->
-    {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') and (request.endpoint != 'deliverer_timeline') %}
-        <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% else %}javascript:history.back(){% endif %}" class="back-button"><strong><span style="color: black;">Go Back</span></strong></a>
+    {% if (request.endpoint != 'login') and (request.endpoint != 'home') and (request.endpoint != 'shopper_timeline') and (request.endpoint != 'deliverer_timeline') and (request.endpoint != 'profile') %}
+        <a href="{% if request.endpoint in ['shop', 'deliver'] %}{{ url_for('home') }}{% elif request.endpoint in ['cart_view'] %}{{ url_for('shop') }}{% else %}javascript:history.back(){% endif %}" class="back-button"><strong><span style="color: black;">Go Back</span></strong></a>
     {% endif %}
 
     <!-- Home Button-->
@@ -396,7 +396,7 @@
                 {% if session.get("user_id") %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                 {% endif %}
-                <a href="{{ url_for('auth.logoutcas') }}">Log Out</a>
+                <a href="{{ url_for('logout_confirmation') }}">Log Out</a>
 
             </div>
         </div>
@@ -425,16 +425,6 @@
 
     <script>
         const userId = "{{ session.get('user_id') }}";
-    </script>
-
-    <script>
-        function goBack() {
-            if (document.referrer && document.referrer.includes(window.location.hostname)) {
-                window.history.back();
-            } else {
-                window.location.href = "{{ url_for('home') }}";
-            }
-        }
     </script>
 
     <!-- Include common scripts -->
