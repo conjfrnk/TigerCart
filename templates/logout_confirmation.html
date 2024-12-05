@@ -1,0 +1,12 @@
+<!--This asks the user to confirm that they would like to log out-->
+
+{% extends "base.html" %}
+{% block title %} Logout Confirmation - TigerCart{% endblock %}
+
+{% block content %}
+<h1>Logout Confirmation</h1>
+<p>Are you sure that you would like to log out?</p>
+<button onclick="window.location.href='{{ url_for("auth.logoutcas") }}'">Yes</button>
+<button onclick="window.location.href='{{ url_for("home") }}'">No</button>
+
+{% endblock %}

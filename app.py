@@ -474,6 +474,13 @@ def order_confirmation():
         items_in_cart=items_in_cart,
         username=username,)
 
+@app.route("/logout_confirmation")
+def logout_confirmation():
+    """Display logout confirmation page"""
+
+    return render_template(
+        "logout_confirmation.html"
+    )
 
 @app.route("/place_order", methods=["POST"])
 def place_order():

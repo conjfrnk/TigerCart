@@ -43,8 +43,8 @@
 
         .back-button {
             position: absolute;
-            top: 55px;
-            left: 325px;
+            top: 40px;
+            left: 550px;
             width: 60px;
             height: 60px;
             background: rgba(255, 255, 255, 0.8);
@@ -396,7 +396,7 @@
                 {% if session.get("user_id") %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                 {% endif %}
-                <a href="{{ url_for('auth.logoutcas') }}">Log Out</a>
+                <a href="{{ url_for('logout_confirmation') }}">Log Out</a>
 
             </div>
         </div>

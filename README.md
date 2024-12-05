@@ -46,3 +46,4 @@
 - [ ] Back button malfunctions in some cases (TODO: add *intuitive* back button things when the auto-detect fails)
 - [X] Forward button malfunctions in some cases
 - [ ] Excess lines in app.py --- move some stuff elsewhere
+- [ ] Alert the user that they successfully updated their contact information if they enter a valid venmo username and/or phone number
