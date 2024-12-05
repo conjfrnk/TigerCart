@@ -26,12 +26,13 @@
 - [ ] Real items, not placeholders
 - [ ] Live U-Store data
 - [X] Mobile-first category ribbon with population
-- [ ] Deliverer hide "declined" orders
+- [X] Deliverer hide "declined" orders
 - [X] Improve efficiency (pages should not need to be refreshed to see changes)
 - [ ] Improve UI (timeline for the most part)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
 ## For 12/06/2024
+- [ ] Add favorites page
 - [ ] Real items, not placeholders
 - [ ] Items not in stock (likely not feasible)
 - [ ] MOBILE MOBILE MOBILE
