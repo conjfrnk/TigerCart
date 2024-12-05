@@ -788,7 +788,7 @@ def profile():
         )
         conn.commit()
         conn.close()
-        flash("Profile updated successfully.")
+        flash("Profile updated successfully!")
         return redirect(url_for("profile"))
 
     user = cursor.execute(
