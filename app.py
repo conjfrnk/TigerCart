@@ -867,7 +867,7 @@ def add_favorite(item_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error("Error adding favorite: %s", str(e))
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error has occurred."}), 500
     finally:
         conn.close()
 
@@ -892,7 +892,7 @@ def remove_favorite(item_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error("Error removing favorite: %s", str(e))
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error has occurred."}), 500
     finally:
         conn.close()
 
