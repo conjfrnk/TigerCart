@@ -401,6 +401,146 @@
             font-weight: bold;
             float: right;
         }
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            .category-button {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+
+            .items-table th, .items-table td {
+                padding: 6px;
+            }
+        }
+
+        .cart-container {
+        text-align: center;
+        margin: 20px auto;
+        }   
+
+        .cart-icon {
+            position: relative;
+            display: inline-block;
+            font-size: 48px; /* Adjust the cart icon size */
+            color: #2c3e50;
+            margin-right: 10px;
+        }
+
+        .cart-badge {
+            position: relative;
+            bottom: 57px;
+            right: -70px;
+            background: red;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 50%;
+            padding: 4px 8px;
+            display: none;
+        }
+
+        .cart-badge.active {
+            display: inline-block; /* Show when items are in the cart */
+        }
+
+        .cart-link {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .cart-link:hover {
+            background-color: #0056b3;
+        }
+
+        .alert {
+            padding: 20px;
+            background-color: green;
+            color: white;
+        }
+
+        .close-button {
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            float: right;
+        }
+        @media (max-width: 600px) {
+        /* Make content wrapper full width on small screens */
+        .content-wrapper {
+            width: 90%;
+            margin-top: 60px;
+        }
+
+        /* Slightly smaller headings on mobile */
+        h1 {
+            font-size: 2em;
+        }
+
+        /* Adjust category buttons for smaller screens */
+        .category-button {
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        /* Reduce the size and spacing of fixed elements */
+        .title-button {
+            font-size: 40px;
+            top: 5px;
+            left: 5px;
+        }
+
+        .back-button {
+            top: 50px;
+            left: 50px;
+            width: 40px;
+            height: 40px;
+        }
+
+        /* Adjust timeline margin so it fits on small screens */
+        .timeline {
+            margin-left: 0;
+            padding-left: 0;
+        }
+
+        .step {
+            margin: 10px 0;
+        }
+
+        .step .circle {
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+        }
+
+        /* Make dropdown narrower on small screens */
+        .dropdown {
+            width: 100px;
+        }
+
+        /* Adjust cart icon and badge on mobile */
+        .cart-icon {
+            font-size: 36px;
+        }
+
+        .cart-badge {
+            font-size: 12px;
+            bottom: 47px;
+            right: -50px;
+        }
+
+        /* Ensure tables can scroll horizontally if needed */
+        table {
+            display: block;
+            overflow-x: auto;
+            width: 100%;
+        }
     </style>
 </head>
 
