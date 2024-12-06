@@ -32,7 +32,7 @@
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
 ## For 12/06/2024
-- [ ] Add favorites page
+- [X] Add favorites page
 - [X] Real items, not placeholders
 - [ ] Items not in stock (likely not feasible)
 - [ ] MOBILE MOBILE MOBILE
