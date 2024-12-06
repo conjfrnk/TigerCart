@@ -28,7 +28,7 @@
 - [X] Mobile-first category ribbon with population
 - [X] Deliverer hide "declined" orders
 - [X] Improve efficiency (pages should not need to be refreshed to see changes)
-- [ ] Improve UI (timeline for the most part)
+- [X] Improve UI (timeline for the most part)
 - [ ] Smooth out UX (replace annoying "added to cart" pop-ups, etc)
 
 ## For 12/06/2024
@@ -41,7 +41,7 @@
 - [X] Eye-catching website title w/ hyperlink (which takes users back to home page)
 - [X] Stylize all tables to be like those that appear upon clicking a category in the categories ribbon on the "shop" page
 - [ ] Add Ms. Spraragen's UX/UI design ideas
-- [ ] Alert the user that they successfully updated their contact information if they enter a valid venmo username and/or phone number
+- [X] Alert the user that they successfully updated their contact information if they enter a valid venmo username and/or phone number
 
 ## Current Bugs
 - [X] Deliveries not appearing
