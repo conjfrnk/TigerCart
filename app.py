@@ -27,6 +27,7 @@ from database import (
     init_user_db,
 )
 from db_utils import update_order_claim_status, get_user_cart
+from datetime import datetime, timezone, timedelta
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -312,6 +313,10 @@ def shopper_timeline():
     order_dict = dict(order)
     order_dict["timeline"] = json.loads(order_dict.get("timeline", "{}"))
     order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
+
+    # Convert the timestamp to EST
+    if "timestamp" in order_dict and order_dict["timestamp"]:
+        order_dict["timestamp"] = convert_to_est(order_dict["timestamp"])
 
     return render_template(
         "shopper_timeline.html",
@@ -1075,6 +1080,10 @@ def deliverer_timeline(delivery_id):
     order["timeline"] = json.loads(order.get("timeline", "{}"))
     order["cart"] = json.loads(order.get("cart", "{}"))
 
+     # Convert the timestamp to EST
+    if "timestamp" in order and order["timestamp"]:
+        order["timestamp"] = convert_to_est(order["timestamp"])
+
     return render_template(
         "deliverer_timeline.html",
         order=order,
@@ -1112,6 +1121,10 @@ def order_details(order_id):
         details.get("quantity", 0) * details.get("price", 0)
         for item_id, details in cart.items()
     )
+
+    # Convert the timestamp to EST
+    if "timestamp" in order and order["timestamp"]:
+        order["timestamp"] = convert_to_est(order["timestamp"])
 
     return render_template(
         "order_details.html",
@@ -1233,6 +1246,14 @@ def get_average_rating(user_id, role):
         return round(row["s"] / row["c"], 1)
     return None
 
+# Define EST as UTC-5, without DST changes
+EST = timezone(timedelta(hours=-5))
+
+def convert_to_est(timestamp_str):
+    dt_utc = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+    dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+    dt_est = dt_utc.astimezone(EST)
+    return dt_est.strftime("%Y-%m-%d %H:%M EST")
 
 
 if __name__ == "__main__":
