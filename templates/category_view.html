@@ -71,11 +71,12 @@
     }
 
     function toggleFavorite(itemId) {
-        {% if item_id in favorites %}
-        const url = "{{ url_for('remove_favorite', item_id=item_id) }}";
-        {% else %}
-        const url = "{{ url_for('add_favorite', item_id=item_id) }}";
-        {% endif %}
+        if (itemId in favorites) {
+            const url = "{{ url_for('remove_favorite', item_id=item_id) }}";
+        }
+        else {
+            const url = "{{ url_for('add_favorite', item_id=item_id) }}";
+        }
 
         fetch(url, { method: 'POST' })
             .then(response => response.json())

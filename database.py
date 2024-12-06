@@ -3,8 +3,8 @@
 database.py
 This module handles database connections and initialization.
 """
-
 import sqlite3
+import csv
 
 MAIN_DATABASE = "tigercart.sqlite3"
 USER_DATABASE = "users.sqlite3"
@@ -28,18 +28,16 @@ def init_main_db():
     """Initializes the main database with necessary tables."""
     conn = get_main_db_connection()
     cursor = conn.cursor()
-
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY,
+            store_code TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             price REAL NOT NULL,
             category TEXT NOT NULL
         )
         """
     )
-
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS orders (
@@ -57,7 +55,6 @@ def init_main_db():
         )
         """
     )
-
     conn.commit()
     conn.close()
 
@@ -66,7 +63,6 @@ def init_user_db():
     """Initializes the user database with necessary tables."""
     conn = get_user_db_connection()
     cursor = conn.cursor()
-
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -78,54 +74,59 @@ def init_user_db():
         )
         """
     )
-
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS favorites (
             user_id TEXT,
-            item_id INTEGER,
+            item_id TEXT,
             PRIMARY KEY (user_id, item_id),
             FOREIGN KEY (user_id) REFERENCES users(user_id),
-            FOREIGN KEY (item_id) REFERENCES items(id)
+            FOREIGN KEY (item_id) REFERENCES items(store_code)
         )
         """
     )
-
     conn.commit()
     conn.close()
 
 
-def populate_items():
-    """Populates the items table with sample data."""
+def populate_items_from_csv(filename="items.csv"):
+    """Populates the items table with data from CSV file."""
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    sample_items = {
-        "1": {"name": "Coke", "price": 1.09, "category": "drinks"},
-        "2": {"name": "Diet Coke", "price": 1.29, "category": "drinks"},
-        "3": {
-            "name": "Tropicana Orange Juice",
-            "price": 0.89,
-            "category": "drinks",
-        },
-        "4": {
-            "name": "Lay's Potato Chips",
-            "price": 1.59,
-            "category": "food",
-        },
-        "5": {
-            "name": "Snickers Bar",
-            "price": 0.99,
-            "category": "food",
-        },
-        "6": {"name": "Notebook", "price": 2.49, "category": "other"},
-    }
+    # First, clear existing items
+    cursor.execute("DELETE FROM items")
 
-    for item_id, item in sample_items.items():
-        cursor.execute(
-            "INSERT OR IGNORE INTO items (id, name, price, category) VALUES (?, ?, ?, ?)",
-            (item_id, item["name"], item["price"], item["category"]),
-        )
+    current_category = None
+
+    with open(filename, "r") as csvfile:
+        csvreader = csv.reader(csvfile)
+        next(csvreader)  # Skip header row
+
+        for row in csvreader:
+            # Skip empty rows
+            if not any(row):
+                continue
+
+            # Check if this is a category row
+            if row[0] and not any(row[1:]):
+                current_category = row[0]
+                continue
+
+            # If we have a regular item row
+            if row[0] and current_category and row[2]:  # Ensure store_code exists
+                name = row[0]
+                store_code = row[2]
+                price = float(row[3]) if row[3] else 0.0
+
+                cursor.execute(
+                    """
+                    INSERT INTO items
+                    (store_code, name, price, category)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (store_code, name, price, current_category),
+                )
 
     conn.commit()
     conn.close()
@@ -134,4 +135,4 @@ def populate_items():
 if __name__ == "__main__":
     init_main_db()
     init_user_db()
-    populate_items()
+    populate_items_from_csv()

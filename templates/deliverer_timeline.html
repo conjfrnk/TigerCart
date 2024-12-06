@@ -91,8 +91,8 @@
           } else {
               // Update the timeline UI
               const timeline = data.timeline;
-              const steps = {{ steps | tojson }};
-              steps.forEach((stepName, index) => {
+              const json_steps = JSON.parse('{{ steps | tojson }}');
+              json_steps.forEach((stepName, index) => {
                   const stepDiv = document.querySelector(`div#${stepName.toLowerCase().replace(/ /g, '-')}-step`);
                   const checkbox = stepDiv.querySelector('input');
                   const circle = stepDiv.querySelector('.circle');
@@ -109,7 +109,7 @@
                   if (index === 0) {
                       checkbox.disabled = false;
                   } else {
-                      const previousStep = steps[index - 1];
+                      const previousStep = json_steps[index - 1];
                       checkbox.disabled = !timeline[previousStep];
                   }
               });
