@@ -117,13 +117,20 @@ def home():
 
 @app.route("/shop")
 def shop():
+    """Display items available in the shop and current order if any."""
     username = authenticate()
     try:
         response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         sample_items = response.json()
-        categories = sorted(set(item["category"] for item in sample_items.values()))
-        categories.insert(0, "Favorites")  # Ensure "Favorites" is always the first category
+
+        # Get raw database categories and convert to display format
+        categories = set()
+        for item in sample_items.values():
+            db_category = item.get("category", "")
+            pretty_category = db_category.replace("_", " ").title()
+            categories.add(pretty_category)
+
     except (requests.RequestException, ValueError) as e:
         logging.error("Error fetching shop items: %s", str(e))
         flash("Unable to load shop items. Please try again later.")
@@ -133,6 +140,23 @@ def shop():
     if not user_id:
         return redirect(url_for("auth.login"))
 
+    # Convert categories to list and sort
+    categories = sorted(list(categories))
+
+    # Check if user has favorites
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) as count FROM favorites WHERE user_id = ?", (user_id,)
+    )
+    favorite_count = cursor.fetchone()["count"]
+
+    # Add Favorites to the beginning if user has favorites
+    if favorite_count > 0:
+        categories.insert(0, "Favorites")
+    conn.close()
+
+    # Get current order
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -146,12 +170,45 @@ def shop():
 
     return render_template(
         "shop.html",
-        categories=categories,
+        categories=categories,  # Now ordered with Favorites first
         current_order=current_order,
         username=username,
     )
 
 
+@app.route("/favorites")
+def favorites_view():
+    """Display user's favorite items."""
+    username = authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("auth.login"))
+
+    # Get user's favorites
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_id FROM favorites WHERE user_id = ?", (user_id,))
+    favorite_items = {str(row["item_id"]) for row in cursor.fetchall()}
+    conn.close()
+
+    # Get all items
+    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    all_items = response.json()
+
+    # Filter for favorites only
+    favorite_items_dict = {
+        item_id: item
+        for item_id, item in all_items.items()
+        if item_id in favorite_items
+    }
+
+    return render_template(
+        "category_view.html",
+        category="Favorites",
+        items=favorite_items_dict,
+        favorites=favorite_items,
+        username=username,
+    )
 
 
 @app.route("/get_category_items")
@@ -161,56 +218,52 @@ def get_category_items():
     if not category:
         return jsonify({"error": "Category not specified"}), 400
 
-    user_id = session.get("user_id")
-    if not user_id:
-        return jsonify({"error": "User not logged in"}), 401
-
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-
+    # Handle 'Favorites' category specially
     if category == "Favorites":
-        user_conn = get_user_db_connection()
-        user_cursor = user_conn.cursor()
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "User not logged in"}), 401
 
-        # Fetch item IDs from favorites table
-        user_cursor.execute(
-            "SELECT item_id FROM favorites WHERE user_id = ?", (user_id,)
-        )
-        favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
-        user_conn.close()
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT item_id FROM favorites WHERE user_id = ?", (user_id,))
+        favorite_items = {str(row["item_id"]) for row in cursor.fetchall()}
+        conn.close()
 
-        # Fetch item details for favorite items
-        if favorite_item_ids:
-            placeholder = ",".join("?" for _ in favorite_item_ids)
-            query = f"SELECT store_code, name, price, category FROM items WHERE id IN ({placeholder})"
-            cursor.execute(query, favorite_item_ids)
-            items = {row["store_code"]: dict(row) for row in cursor.fetchall()}
-        else:
-            items = {}
-
+        response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        all_items = response.json()
+        items_in_category = {k: v for k, v in all_items.items() if k in favorite_items}
     else:
-        # Fetch items based on the selected category
-        cursor.execute(
-            "SELECT store_code, name, price, category FROM items WHERE category = ?",
-            (category,),
-        )
-        items = {row["store_code"]: dict(row) for row in cursor.fetchall()}
+        # Convert pretty category name back to database format
+        # Handle both single and multi-word categories
+        db_category = category.upper()
 
-    conn.close()
+        response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        all_items = response.json()
 
-    # Add favorite information
-    user_conn = get_user_db_connection()
-    user_cursor = user_conn.cursor()
-    user_cursor.execute(
-        "SELECT item_id FROM favorites WHERE user_id = ?", (user_id,)
-    )
-    favorite_item_ids = {row["item_id"] for row in user_cursor.fetchall()}
-    user_conn.close()
+        # Match category ignoring spaces and case
+        items_in_category = {
+            k: v
+            for k, v in all_items.items()
+            if v.get("category", "").replace(" ", "") == db_category.replace(" ", "")
+        }
 
-    for item in items.values():
-        item["is_favorite"] = item["store_code"] in favorite_item_ids
+    # Add favorite status to all items
+    user_id = session.get("user_id")
+    favorite_item_ids = set()
+    if user_id:
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT item_id FROM favorites WHERE user_id = ?", (user_id,))
+        favorite_items = cursor.fetchall()
+        conn.close()
+        favorite_item_ids = {str(row["item_id"]) for row in favorite_items}
 
-    return jsonify({"items": items})
+    for item_id_str, item in items_in_category.items():
+        item["is_favorite"] = item_id_str in favorite_item_ids
+
+    return jsonify({"items": items_in_category})
+
 
 @app.route("/shopper_timeline")
 def shopper_timeline():
@@ -269,15 +322,34 @@ def shopper_timeline():
 def category_view(category):
     """Display items in a specific category."""
     username = authenticate()
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
+    user_id = session.get("user_id")
+
+    # Get user's favorites
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_id FROM favorites WHERE user_id = ?", (user_id,))
+    favorites = {str(row["item_id"]) for row in cursor.fetchall()}
+    conn.close()
+
+    # Get items
     response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
     sample_items = response.json()
+
+    # Filter items for this category - case insensitive comparison
     items_in_category = {
-        k: v for k, v in sample_items.items() if v.get("category") == category
+        k: v
+        for k, v in sample_items.items()
+        if v.get("category", "").upper() == category.upper()
     }
+
     return render_template(
         "category_view.html",
         category=category,
         items=items_in_category,
+        favorites=favorites,
         username=username,
     )
 
@@ -328,7 +400,7 @@ def add_to_cart(item_id):
             "item_id": item_id,
             "action": "add",
         },
-        timeout=REQUEST_TIMEOUT
+        timeout=REQUEST_TIMEOUT,
     )
 
     return jsonify(response.json())
@@ -779,31 +851,25 @@ def add_favorite(item_id):
     """Add an item to the user's favorites."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify({"success": False, "error": "User not logged in"}), 401
 
     logging.info("Adding favorite: user_id=%s, item_id=%s", user_id, item_id)
 
-    try:
-        item_id = int(item_id)
-    except ValueError:
-        return (
-            jsonify({"success": False, "error": "Invalid item ID"}),
-            400,
-        )
-
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        """INSERT OR IGNORE INTO favorites (user_id, item_id)
-        VALUES (?, ?)""",
-        (user_id, item_id),
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True}), 200
+    try:
+        cursor.execute(
+            """INSERT OR IGNORE INTO favorites (user_id, item_id)
+            VALUES (?, ?)""",
+            (user_id, item_id),
+        )
+        conn.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error("Error adding favorite: %s", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        conn.close()
 
 
 @app.route("/remove_favorite/<item_id>", methods=["POST"])
@@ -811,30 +877,24 @@ def remove_favorite(item_id):
     """Remove an item from the user's favorites."""
     user_id = session.get("user_id")
     if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
+        return jsonify({"success": False, "error": "User not logged in"}), 401
 
     logging.info("Removing favorite: user_id=%s, item_id=%s", user_id, item_id)
 
-    try:
-        item_id = int(item_id)
-    except ValueError:
-        return (
-            jsonify({"success": False, "error": "Invalid item ID"}),
-            400,
-        )
-
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "DELETE FROM favorites WHERE user_id = ? AND item_id = ?",
-        (user_id, item_id),
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True}), 200
+    try:
+        cursor.execute(
+            "DELETE FROM favorites WHERE user_id = ? AND item_id = ?",
+            (user_id, item_id),
+        )
+        conn.commit()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        logging.error("Error removing favorite: %s", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        conn.close()
 
 
 @app.route("/profile", methods=["GET", "POST"])

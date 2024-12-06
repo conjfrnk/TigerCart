@@ -5,14 +5,14 @@
 
 {% block content %}
 {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert">
-                <span class="close-button" onclick="this.parentElement.style.display='none';">&times</span>
-                <strong>{{ message }}</strong>
-            </div>
-        {% endfor %}
-    {% endif %}
+{% if messages %}
+{% for message in messages %}
+<div class="alert">
+    <span class="close-button" onclick="this.parentElement.style.display='none';">&times</span>
+    <strong>{{ message }}</strong>
+</div>
+{% endfor %}
+{% endif %}
 {% endwith %}
 
 <h1>Shop</h1>
@@ -23,7 +23,15 @@
 <div class="category-ribbon">
     <div class="categories">
         {% for category in categories %}
-            <button class="category-button" data-category="{{ category }}" style="text-transform: capitalize;">{{ category }}</button>
+        {% if category == "Favorites" %}
+        <button class="category-button" data-category="{{ category }}" style="text-transform: none;">
+            <i class="fas fa-heart" style="color: red;"></i> {{ category }}
+        </button>
+        {% else %}
+        <button class="category-button" data-category="{{ category }}" style="text-transform: none;">
+            {{ category }}
+        </button>
+        {% endif %}
         {% endfor %}
     </div>
 </div>
@@ -50,210 +58,248 @@
 </div>
 
 {% if current_order %}
-    <hr>
-    <h2><u>Your Current Order</u></h2>
-    <p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
-    <p><strong>Status:</strong> {{ current_order['status'] }}</p>
-    <p>Click the button below to view the timeline of your current order:</p>
-    <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
+<hr>
+<h2><u>Your Current Order</u></h2>
+<p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
+<p><strong>Status:</strong> {{ current_order['status'] }}</p>
+<p>Click the button below to view the timeline of your current order:</p>
+<a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
 {% endif %}
 
 <!-- JavaScript to handle category selection and item loading -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const categoryButtons = document.querySelectorAll('.category-button');
-        categoryButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const category = this.getAttribute('data-category');
-                loadCategoryItems(category);
+ document.addEventListener('DOMContentLoaded', function() {
+     const categoryButtons = document.querySelectorAll('.category-button');
+     categoryButtons.forEach(button => {
+         button.addEventListener('click', function() {
+             const category = this.getAttribute('data-category');
+             loadCategoryItems(category);
 
-                // Highlight the selected category
-                categoryButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-    });
+             // Highlight the selected category
+             categoryButtons.forEach(btn => btn.classList.remove('active'));
+             this.classList.add('active');
+         });
+     });
 
-    function loadCategoryItems(category) {
-        fetch(`{{ url_for('get_category_items') }}?category=${encodeURIComponent(category)}`)
-            .then(response => response.json())
-            .then(data => {
-                const itemsContainer = document.getElementById('items-container');
-                itemsContainer.innerHTML = '';
+     // Trigger click on the first category button
+     if (categoryButtons.length > 0) {
+         categoryButtons[0].click();
+     }
+ });
 
-                if (data.items && Object.keys(data.items).length > 0) {
-                    const table = document.createElement('table');
-                    table.classList.add('items-table');
+ function formatName(name) {
+     // First split by both underscores and spaces
+     return name.split(/[_ ]/)
+     // Filter out any empty strings from multiple spaces
+                .filter(word => word.length > 0)
+     // Capitalize first letter, rest lowercase for each word
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+     // Join with single spaces
+                .join(' ');
+ }
 
-                    // Table header
-                    const thead = document.createElement('thead');
-                    thead.innerHTML = `
-                        <tr>
-                            <th>Item</th>
-                            <th>Price ($)</th>
-                            <th>Add to Cart</th>
-                            <th>Add to Favorites</th>
-                        </tr>
-                    `;
-                    table.appendChild(thead);
+ function loadCategoryItems(category) {
+     fetch(`{{ url_for('get_category_items') }}?category=${encodeURIComponent(category)}`)
+         .then(response => response.json())
+         .then(data => {
+             const itemsContainer = document.getElementById('items-container');
+             itemsContainer.innerHTML = '';
 
-                    // Table body
-                    const tbody = document.createElement('tbody');
-                    for (const [itemId, item] of Object.entries(data.items)) {
-                        const tr = document.createElement('tr');
-                        const isFavorite = item.is_favorite;
-                        
-                        tr.innerHTML = `
-                            <td>${item.name}</td>
-                            <td>${item.price}</td>
-                            <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
-                            <td><i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
-                        `;
-                        
-                        // Add event listener ot heart icon
-                        const heartIcon = tr.querySelector('.fa-heart');
-                        heartIcon.addEventListener('click', function() {
-                            const isFavoriteNow = heartIcon.classList.contains('fas');
-                            if (isFavoriteNow) {
-                                // Currently favorite, remove favorite
-                                removeFavorite(itemId, heartIcon);
-                            } else {
-                                // Currently not favorite, add favorite
-                                addFavorite(itemId, heartIcon);
-                            }
-                        });
+             if (data.items && Object.keys(data.items).length > 0) {
+                 const table = document.createElement('table');
+                 table.classList.add('items-table');
 
-                        tbody.appendChild(tr);
-                    }
-                    table.appendChild(tbody);
+                 // Table header
+                 const thead = document.createElement('thead');
+                 thead.innerHTML = `
+                     <tr>
+                         <th>Item</th>
+                         <th>Price ($)</th>
+                         <th>Add to Cart</th>
+                         <th>Favorite</th>
+                     </tr>
+                 `;
+                 table.appendChild(thead);
 
-                    itemsContainer.appendChild(table);
-                } else {
-                    itemsContainer.innerHTML = '<p>No items found in this category.</p>';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching category items:', error);
-                alert('Failed to load items.');
-            });
-    }
+                 // Table body
+                 const tbody = document.createElement('tbody');
+                 // Convert items to array and sort by name
+                 const sortedItems = Object.entries(data.items).sort((a, b) =>
+                     formatName(a[1].name).localeCompare(formatName(b[1].name))
+                 );
 
-    function addFavorite(itemId, heartIcon) {
-        fetch(`/add_favorite/${itemId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                heartIcon.classList.remove('far');
-                heartIcon.classList.add('fas');
-                heartIcon.style.color = 'red';
-            } else {
-                response.json().then(data => alert('Error: ' + data.error));
-            }
-        }).catch(error => {
-            console.error('Error adding favorite:', error);
-            alert('Failed to add favorite.');
-        });
-    }
+                 for (const [itemId, item] of sortedItems) {
+                     const tr = document.createElement('tr');
+                     const isFavorite = item.is_favorite;
 
-    function removeFavorite(itemId, heartIcon) {
-        fetch(`/remove_favorite/${itemId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                heartIcon.classList.remove('fas');
-                heartIcon.classList.add('far');
-                heartIcon.style.color = ''
-            } else {
-                response.json().then(data => alert ('Error: ' + data.error));
-            }
-        }).catch(error => {
-            console.error('Error removing favorite:', error);
-            alert('Failed to remove favorite.');
-        });
-    }
+                     tr.innerHTML = `
+                         <td>${formatName(item.name)}</td>
+                         <td>${item.price.toFixed(2)}</td>
+                         <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
+                         <td><i class="fa-heart ${isFavorite ? 'fas' : 'far'}" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}" onclick="toggleFavorite('${itemId}', this)"></i></td>
+                     `;
 
-    function addToCart(itemId) {
-        fetch(`/add_to_cart/${itemId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
-        })
-        .then(response => response.json())
-        .then(data => console.log(data))
-        .catch(error => console.log(error));
+                     tbody.appendChild(tr);
+                 }
+                 table.appendChild(tbody);
 
-        alert("Item added to cart!")
-    }
+                 itemsContainer.appendChild(table);
+             } else {
+                 itemsContainer.innerHTML = '<p>No items found in this category.</p>';
+             }
+         })
+         .catch(error => {
+             console.error('Error fetching category items:', error);
+             alert('Failed to load items.');
+         });
+ }
 
-    function fetchCartCount() {
-        fetch('/get_cart_count', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateCartCount(data.cart_count); // Use 'cart_count' as returned by the backend
-            }
-        })
-        .catch(error => console.error('Error fetching cart count:', error));
-        }
+ function toggleFavorite(itemId, heartIcon) {
+     const isFavorite = heartIcon.classList.contains('fas');
+     const url = isFavorite ? `/remove_favorite/${itemId}` : `/add_favorite/${itemId}`;
+     const currentCategory = document.querySelector('.category-button.active').getAttribute('data-category');
+     const categoriesDiv = document.querySelector('.categories');
+     const hasFavoritesCategory = Array.from(document.querySelectorAll('.category-button'))
+                                       .some(button => button.getAttribute('data-category') === 'Favorites');
 
+     fetch(url, {
+         method: 'POST',
+         headers: {
+             'Content-Type': 'application/json'
+         }
+     }).then(response => {
+         if (response.ok) {
+             if (isFavorite) {
+                 // Removing from favorites
+                 heartIcon.classList.remove('fas');
+                 heartIcon.classList.add('far');
+                 heartIcon.style.color = '';
 
-    function updateCartCount(itemsInCart) {
-        const cartCountElement = document.getElementById('cart-badge');
-        cartCountElement.textContent = itemsInCart;
+                 // If we're in the Favorites category and it might become empty,
+                 // check if this was the last favorite
+                 if (currentCategory === 'Favorites') {
+                     fetch('/get_category_items?category=Favorites')
+                         .then(response => response.json())
+                         .then(data => {
+                             const remainingFavorites = Object.keys(data.items || {}).length;
+                             if (remainingFavorites <= 1) {
+                                 // Remove Favorites button and switch to first available category
+                                 const favButton = document.querySelector('.category-button[data-category="Favorites"]');
+                                 if (favButton) {
+                                     favButton.remove();
+                                     // Click the first remaining category
+                                     const firstCategory = document.querySelector('.category-button');
+                                     if (firstCategory) firstCategory.click();
+                                 }
+                             } else {
+                                 loadCategoryItems('Favorites');
+                             }
+                         });
+                 } else {
+                     loadCategoryItems(currentCategory);
+                 }
+             } else {
+                 // Adding to favorites
+                 heartIcon.classList.remove('far');
+                 heartIcon.classList.add('fas');
+                 heartIcon.style.color = 'red';
 
-        if (itemsInCart > 0) {
-            cartCountElement.classList.add('active'); // Show the badge
-        } else {
-            cartCountElement.classList.remove('active'); // Hide the badge
-        }
-    }
+                 // If Favorites category doesn't exist yet, add it to the top
+                 if (!hasFavoritesCategory) {
+                     const favButton = document.createElement('button');
+                     favButton.className = 'category-button';
+                     favButton.setAttribute('data-category', 'Favorites');
+                     favButton.style.textTransform = 'none';
+                     favButton.innerHTML = '<i class="fas fa-heart" style="color: red;"></i> Favorites';
 
-    // Call fetchCartCount on page load
-    document.addEventListener('DOMContentLoaded', fetchCartCount);
+                     // Add click handler
+                     favButton.addEventListener('click', function() {
+                         const category = this.getAttribute('data-category');
+                         loadCategoryItems(category);
+                         // Highlight the selected category
+                         document.querySelectorAll('.category-button').forEach(btn => btn.classList.remove('active'));
+                         this.classList.add('active');
+                     });
 
-    function refreshCart() {
-        fetch("/get_cart_status") // Ensure this endpoint exists in your backend
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const cartBadge = document.querySelector("#cart-badge");
+                     // Insert at the beginning
+                     categoriesDiv.insertBefore(favButton, categoriesDiv.firstChild);
+                 }
 
-                    // Calculate total items in the cart
-                    const totalItemsCount = Object.values(data.cart).reduce((total, item) => total + item.quantity, 0);
+                 loadCategoryItems(currentCategory);
+             }
+         } else {
+             response.json().then(data => alert('Error: ' + data.error));
+         }
+     }).catch(error => {
+         console.error('Error updating favorite:', error);
+         alert('Failed to update favorite.');
+     });
+ }
 
-                    // Update the badge
-                    cartBadge.textContent = totalItemsCount;
+ function addToCart(itemId) {
+     fetch(`/add_to_cart/${itemId}`, {
+         method: 'POST',
+         headers: {
+             'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
+     })
+         .then(response => response.json())
+         .then(data => {
+             console.log(data);
+             refreshCart();
+             alert("Item added to cart!");
+         })
+         .catch(error => console.log(error));
+ }
 
-                    // Show or hide the badge
-                    if (totalItemsCount > 0) {
-                        cartBadge.classList.add("active");
-                    } else {
-                        cartBadge.classList.remove("active");
-                    }
-                }
-            })
-            .catch(error => console.error("Error fetching cart status:", error));
-    }
+ function fetchCartCount() {
+     fetch('/get_cart_count')
+         .then(response => response.json())
+         .then(data => {
+             if (data.success) {
+                 updateCartCount(data.cart_count);
+             }
+         })
+         .catch(error => console.error('Error fetching cart count:', error));
+ }
 
-    // Refresh cart every second
-    setInterval(refreshCart, 1000);
-    // Initial load
-    refreshCart();
+ function updateCartCount(itemsInCart) {
+     const cartCountElement = document.getElementById('cart-badge');
+     cartCountElement.textContent = itemsInCart;
 
+     if (itemsInCart > 0) {
+         cartCountElement.classList.add('active');
+     } else {
+         cartCountElement.classList.remove('active');
+     }
+ }
 
+ // Call fetchCartCount on page load
+ document.addEventListener('DOMContentLoaded', fetchCartCount);
+
+ function refreshCart() {
+     fetch("/get_cart_status")
+         .then(response => response.json())
+         .then(data => {
+             if (data.success) {
+                 const cartBadge = document.querySelector("#cart-badge");
+                 const totalItemsCount = Object.values(data.cart).reduce((total, item) => total + item.quantity, 0);
+                 cartBadge.textContent = totalItemsCount;
+
+                 if (totalItemsCount > 0) {
+                     cartBadge.classList.add("active");
+                 } else {
+                     cartBadge.classList.remove("active");
+                 }
+             }
+         })
+         .catch(error => console.error("Error fetching cart status:", error));
+ }
+
+ // Refresh cart every second
+ setInterval(refreshCart, 1000);
+ // Initial load
+ refreshCart();
 </script>
 {% endblock %}
-
