@@ -49,7 +49,7 @@ def manage_cart():
         item_conn = get_main_db_connection()
         item_cursor = item_conn.cursor()
         item_exists = item_cursor.execute(
-            "SELECT 1 FROM items WHERE id = ?", (item_id,)
+            "SELECT 1 FROM items WHERE store_code = ?", (item_id,)
         ).fetchone()
         item_conn.close()
 
@@ -99,7 +99,7 @@ def fetch_detailed_cart(cart, cursor_orders):
 
     for item_id, item_info in cart.items():
         item_data = cursor_orders.execute(
-            "SELECT name, price FROM items WHERE id = ?", (item_id,)
+            "SELECT name, price FROM items WHERE store_code = ?", (item_id,)
         ).fetchone()
         if item_data:
             item_price = item_data["price"]

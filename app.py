@@ -182,19 +182,19 @@ def get_category_items():
         # Fetch item details for favorite items
         if favorite_item_ids:
             placeholder = ",".join("?" for _ in favorite_item_ids)
-            query = f"SELECT id, name, price, category FROM items WHERE id IN ({placeholder})"
+            query = f"SELECT store_code, name, price, category FROM items WHERE id IN ({placeholder})"
             cursor.execute(query, favorite_item_ids)
-            items = {row["id"]: dict(row) for row in cursor.fetchall()}
+            items = {row["store_code"]: dict(row) for row in cursor.fetchall()}
         else:
             items = {}
 
     else:
         # Fetch items based on the selected category
         cursor.execute(
-            "SELECT id, name, price, category FROM items WHERE category = ?",
+            "SELECT store_code, name, price, category FROM items WHERE category = ?",
             (category,),
         )
-        items = {row["id"]: dict(row) for row in cursor.fetchall()}
+        items = {row["store_code"]: dict(row) for row in cursor.fetchall()}
 
     conn.close()
 
@@ -208,7 +208,7 @@ def get_category_items():
     user_conn.close()
 
     for item in items.values():
-        item["is_favorite"] = item["id"] in favorite_item_ids
+        item["is_favorite"] = item["store_code"] in favorite_item_ids
 
     return jsonify({"items": items})
 
