@@ -22,7 +22,7 @@ def get_items():
     items = cursor.execute("SELECT * FROM items").fetchall()
     conn.close()
 
-    items_dict = {str(item["id"]): dict(item) for item in items}
+    items_dict = {item["store_code"]: dict(item) for item in items}
     return jsonify(items_dict)
 
 
