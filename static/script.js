@@ -9,25 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function addToCart(itemId) {
-    fetch(`/add_to_cart/${itemId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_id: userId })  // Ensure userId is available globally
-    }).then(response => {
-        if (response.ok) {
-            alert('Item added to cart!');
-        } else {
-            response.json().then(data => alert('Error: ' + data.error));
-        }
-    }).catch(error => {
-        console.error('Error adding to cart:', error);
-        alert('Failed to add item to cart.');
-    });
-}
-
 function updateQuantity(itemId, action) {
     fetch(`/update_cart/${itemId}/${action}`, {
         method: 'POST',

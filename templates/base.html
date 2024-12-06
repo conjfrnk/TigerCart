@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}TigerCart{% endblock %}</title>
+    <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/fa-team/fontawesome/128/FontAwesome-Cart-Shopping-icon.png">
     <!-- Include any common CSS here -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -71,8 +72,6 @@
             stroke-linecap: round;
             stroke-linejoin: round;
         }
-
-
 
         .top-right {
             position: fixed;
@@ -191,68 +190,68 @@
         }
 
         .timeline {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-left: 40px;
-    position: relative;
-    padding: 20px 0;
-}
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-left: 40px;
+            position: relative;
+            padding: 20px 0;
+        }
 
-.step {
-    display: flex;
-    align-items: center;
-    margin: 20px 0;
-    position: relative;
-    gap: 15px;
-}
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            position: relative;
+            gap: 15px;
+        }
 
-.step::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 0;
-    height: 100%;
-    width: 2px;
-    background-color: #ddd;
-    z-index: -1;
-}
+        .step::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background-color: #ddd;
+            z-index: -1;
+        }
 
-.step .circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #ddd;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 30px;
-    color: white;
-}
+        .step .circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            color: white;
+        }
 
-.step.complete .circle {
-    background-color: green;
-}
+        .step.complete .circle {
+            background-color: green;
+        }
 
-.step .step-text {
-    font-size: 16px;
-    color: #333;
-    margin-left: 10px;
-}
+        .step .step-text {
+            font-size: 16px;
+            color: #333;
+            margin-left: 10px;
+        }
 
-.big-checkbox {
-    transform: scale(1.5); /* Increase the size of the checkbox */
-    cursor: pointer; /* Add a pointer cursor for better UX */
-  }
+        .big-checkbox {
+            transform: scale(1.5); /* Increase the size of the checkbox */
+            cursor: pointer; /* Add a pointer cursor for better UX */
+        }
 
-  .big-checkbox:disabled {
-    opacity: 0.5; /* Dim the checkbox if it's disabled */
-    cursor: not-allowed; /* Change the cursor for disabled checkboxes */
-  }
+        .big-checkbox:disabled {
+            opacity: 0.5; /* Dim the checkbox if it's disabled */
+            cursor: not-allowed; /* Change the cursor for disabled checkboxes */
+        }
 
-.step:last-child::before {
-    display: none; /* Remove the line for the last step */
-}
+        .step:last-child::before {
+            display: none; /* Remove the line for the last step */
+        }
 
 
         .github-button {
@@ -345,63 +344,64 @@
         .cart-container {
         text-align: center;
         margin: 20px auto;
-    }
+        }   
 
-    .cart-icon {
-        position: relative;
-        display: inline-block;
-        font-size: 48px; /* Adjust the cart icon size */
-        color: #2c3e50;
-        margin-right: 10px;
-    }
+        .cart-icon {
+            position: relative;
+            display: inline-block;
+            font-size: 48px; /* Adjust the cart icon size */
+            color: #2c3e50;
+            margin-right: 10px;
+        }
 
-    .cart-badge {
-        position: relative;
-        bottom: 57px;
-        right: -70px;
-        background: red;
-        color: white;
-        font-size: 14px;
-        font-weight: bold;
-        border-radius: 50%;
-        padding: 4px 8px;
-        display: none;
-    }
+        .cart-badge {
+            position: relative;
+            bottom: 57px;
+            right: -70px;
+            background: red;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 50%;
+            padding: 4px 8px;
+            display: none;
+        }
 
-    .cart-badge.active {
-        display: inline-block; /* Show when items are in the cart */
-    }
+        .cart-badge.active {
+            display: inline-block; /* Show when items are in the cart */
+        }
 
-    .cart-link {
-        text-decoration: none;
-        color: #007bff;
-        font-size: 18px;
-        background-color: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        display: inline-block;
-        margin-top: 10px;
-    }
+        .cart-link {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+        }
 
-    .cart-link:hover {
-        background-color: #0056b3;
-    }
+        .cart-link:hover {
+            background-color: #0056b3;
+        }
 
-    .alert {
-        padding: 20px;
-        background-color: green;
-        color: white;
-    }
+        .alert {
+            padding: 20px;
+            background-color: green;
+            color: white;
+        }
 
-    .close-button {
-        color: white;
-        cursor: pointer;
-        font-weight: bold;
-        float: right;
-    }
+        .close-button {
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            float: right;
+        }
     </style>
 </head>
+
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-L7JXSY2NBE"></script>
 <script defer nonce="analytics">
@@ -468,6 +468,5 @@
 
     <!-- Include common scripts -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    
 </body>
 </html>

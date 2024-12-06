@@ -301,8 +301,9 @@ def add_to_cart(item_id):
             "item_id": item_id,
             "action": "add",
         },
-        timeout=REQUEST_TIMEOUT,
+        timeout=REQUEST_TIMEOUT
     )
+
     return jsonify(response.json())
 
 

@@ -9,7 +9,7 @@
         {% for message in messages %}
             <div class="alert">
                 <span class="close-button" onclick="this.parentElement.style.display='none';">&times</span>
-                <strong>Profile Updated Successfully!</strong>
+                <strong>{{ message }}</strong>
             </div>
         {% endfor %}
     {% endif %}

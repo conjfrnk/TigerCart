@@ -4,250 +4,256 @@
 {% block title %}Shop - TigerCart{% endblock %}
 
 {% block content %}
-
-    <h1>Shop</h1>
-    <hr>
-    <!-- Category Ribbon -->
-     <h2><u>Categories</u></h2>
-     <p>Select the item category that you would like to view:</p>
-    <div class="category-ribbon">
-        <div class="categories">
-            {% for category in categories %}
-                <button class="category-button" data-category="{{ category }}">{{ category.capitalize() }}</button>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Items Container -->
-    <div id="items-container">
-        <!-- Items will be loaded here dynamically -->
-    </div>
-
-    <!-- Current Cart -->
-    <hr>
-    <h2><u>Current Cart</u></h2>
-    <p>Click the button below to view your current cart:</p>
-    <div class="cart-container">
-        <!-- View Cart Button w/ Cart Icon -->
-        <div class="cart-button-container">
-            <a href="/cart_view" class="cart-link"><i class="fas fa-shopping-cart"></i>  View Cart</a>
-        </div>
-
-        <!-- Cart Badge -->
-        <div class="cart-badge-container">
-            <span class="cart-badge" id="cart-badge">0</span>
-        </div>
-    </div>
-
-    {% if current_order %}
-        <hr>
-        <h2><u>Your Current Order</u></h2>
-        <p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
-        <p><strong>Status:</strong> {{ current_order['status'] }}</p>
-        <p>Click the button below to view the timeline of your current order:</p>
-        <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert">
+                <span class="close-button" onclick="this.parentElement.style.display='none';">&times</span>
+                <strong>{{ message }}</strong>
+            </div>
+        {% endfor %}
     {% endif %}
+{% endwith %}
 
-    <!-- JavaScript to handle category selection and item loading -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const categoryButtons = document.querySelectorAll('.category-button');
-            categoryButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const category = this.getAttribute('data-category');
-                    loadCategoryItems(category);
+<h1>Shop</h1>
+<hr>
+<!-- Category Ribbon -->
+    <h2><u>Categories</u></h2>
+    <p>Select the item category that you would like to view:</p>
+<div class="category-ribbon">
+    <div class="categories">
+        {% for category in categories %}
+            <button class="category-button" data-category="{{ category }}">{{ category.capitalize() }}</button>
+        {% endfor %}
+    </div>
+</div>
 
-                    // Highlight the selected category
-                    categoryButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
-                });
+<!-- Items Container -->
+<div id="items-container">
+    <!-- Items will be loaded here dynamically -->
+</div>
+
+<!-- Current Cart -->
+<hr>
+<h2><u>Current Cart</u></h2>
+<p>Click the button below to view your current cart:</p>
+<div class="cart-container">
+    <!-- View Cart Button w/ Cart Icon -->
+    <div class="cart-button-container">
+        <a href="/cart_view" class="cart-link"><i class="fas fa-shopping-cart"></i>  View Cart</a>
+    </div>
+
+    <!-- Cart Badge -->
+    <div class="cart-badge-container">
+        <span class="cart-badge" id="cart-badge">0</span>
+    </div>
+</div>
+
+{% if current_order %}
+    <hr>
+    <h2><u>Your Current Order</u></h2>
+    <p><strong>Order ID:</strong> {{ current_order['id'] }}</p>
+    <p><strong>Status:</strong> {{ current_order['status'] }}</p>
+    <p>Click the button below to view the timeline of your current order:</p>
+    <a href="{{ url_for('shopper_timeline') }}">View Order Timeline</a>
+{% endif %}
+
+<!-- JavaScript to handle category selection and item loading -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryButtons = document.querySelectorAll('.category-button');
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                loadCategoryItems(category);
+
+                // Highlight the selected category
+                categoryButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
             });
         });
+    });
 
-        function loadCategoryItems(category) {
-            fetch(`{{ url_for('get_category_items') }}?category=${encodeURIComponent(category)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const itemsContainer = document.getElementById('items-container');
-                    itemsContainer.innerHTML = '';
+    function loadCategoryItems(category) {
+        fetch(`{{ url_for('get_category_items') }}?category=${encodeURIComponent(category)}`)
+            .then(response => response.json())
+            .then(data => {
+                const itemsContainer = document.getElementById('items-container');
+                itemsContainer.innerHTML = '';
 
-                    if (data.items && Object.keys(data.items).length > 0) {
-                        const table = document.createElement('table');
-                        table.classList.add('items-table');
+                if (data.items && Object.keys(data.items).length > 0) {
+                    const table = document.createElement('table');
+                    table.classList.add('items-table');
 
-                        // Table header
-                        const thead = document.createElement('thead');
-                        thead.innerHTML = `
-                            <tr>
-                                <th>Item</th>
-                                <th>Price ($)</th>
-                                <th>Add to Cart</th>
-                                <th>Add to Favorites</th>
-                            </tr>
+                    // Table header
+                    const thead = document.createElement('thead');
+                    thead.innerHTML = `
+                        <tr>
+                            <th>Item</th>
+                            <th>Price ($)</th>
+                            <th>Add to Cart</th>
+                            <th>Add to Favorites</th>
+                        </tr>
+                    `;
+                    table.appendChild(thead);
+
+                    // Table body
+                    const tbody = document.createElement('tbody');
+                    for (const [itemId, item] of Object.entries(data.items)) {
+                        const tr = document.createElement('tr');
+                        const isFavorite = item.is_favorite;
+                        
+                        tr.innerHTML = `
+                            <td>${item.name}</td>
+                            <td>${item.price}</td>
+                            <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
+                            <td><i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
                         `;
-                        table.appendChild(thead);
+                        
+                        // Add event listener ot heart icon
+                        const heartIcon = tr.querySelector('.fa-heart');
+                        heartIcon.addEventListener('click', function() {
+                            const isFavoriteNow = heartIcon.classList.contains('fas');
+                            if (isFavoriteNow) {
+                                // Currently favorite, remove favorite
+                                removeFavorite(itemId, heartIcon);
+                            } else {
+                                // Currently not favorite, add favorite
+                                addFavorite(itemId, heartIcon);
+                            }
+                        });
 
-                        // Table body
-                        const tbody = document.createElement('tbody');
-                        for (const [itemId, item] of Object.entries(data.items)) {
-                            const tr = document.createElement('tr');
-                            const isFavorite = item.is_favorite;
-                            
-                            tr.innerHTML = `
-                                <td>${item.name}</td>
-                                <td>${item.price}</td>
-                                <td><button onclick="addToCart('${itemId}')">Add to Cart</button></td>
-                                <td><i class="${isFavorite ? 'fas' : 'far'} fa-heart" style="cursor: pointer; ${isFavorite ? 'color: red;' : ''}"></i></td>
-                            `;
-                            
-                            // Add event listener ot heart icon
-                            const heartIcon = tr.querySelector('.fa-heart');
-                            heartIcon.addEventListener('click', function() {
-                                const isFavoriteNow = heartIcon.classList.contains('fas');
-                                if (isFavoriteNow) {
-                                    // Currently favorite, remove favorite
-                                    removeFavorite(itemId, heartIcon);
-                                } else {
-                                    // Currently not favorite, add favorite
-                                    addFavorite(itemId, heartIcon);
-                                }
-                            });
-
-                            tbody.appendChild(tr);
-                        }
-                        table.appendChild(tbody);
-
-                        itemsContainer.appendChild(table);
-                    } else {
-                        itemsContainer.innerHTML = '<p>No items found in this category.</p>';
+                        tbody.appendChild(tr);
                     }
-                })
-                .catch(error => {
-                    console.error('Error fetching category items:', error);
-                    alert('Failed to load items.');
-                });
-        }
+                    table.appendChild(tbody);
 
-        function addFavorite(itemId, heartIcon) {
-            fetch(`/add_favorite/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then(response => {
-                if (response.ok) {
-                    heartIcon.classList.remove('far');
-                    heartIcon.classList.add('fas');
-                    heartIcon.style.color = 'red';
+                    itemsContainer.appendChild(table);
                 } else {
-                    response.json().then(data => alert('Error: ' + data.error));
+                    itemsContainer.innerHTML = '<p>No items found in this category.</p>';
                 }
-            }).catch(error => {
-                console.error('Error adding favorite:', error);
-                alert('Failed to add favorite.');
+            })
+            .catch(error => {
+                console.error('Error fetching category items:', error);
+                alert('Failed to load items.');
             });
-        }
-
-        function removeFavorite(itemId, heartIcon) {
-            fetch(`/remove_favorite/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then(response => {
-                if (response.ok) {
-                    heartIcon.classList.remove('fas');
-                    heartIcon.classList.add('far');
-                    heartIcon.style.color = ''
-                } else {
-                    response.json().then(data => alert ('Error: ' + data.error));
-                }
-            }).catch(error => {
-                console.error('Error removing favorite:', error);
-                alert('Failed to remove favorite.');
-            });
-        }
-
-        function addToCart(itemId) {
-            fetch(`/add_to_cart/${itemId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
-            }).then(response => {
-                if (response.ok) {
-                    alert('Item added to cart!');
-                } else {
-                    response.json().then(data => alert('Error: ' + data.error));
-                }
-            }).catch(error => {
-                console.error('Error adding to cart:', error);
-                alert('Failed to add item to cart.');
-            });
-        }
-
-        function fetchCartCount() {
-    fetch('/get_cart_count', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateCartCount(data.cart_count); // Use 'cart_count' as returned by the backend
-        }
-    })
-    .catch(error => console.error('Error fetching cart count:', error));
-}
-
-
-function updateCartCount(itemsInCart) {
-    const cartCountElement = document.getElementById('cart-badge');
-    cartCountElement.textContent = itemsInCart;
-
-    if (itemsInCart > 0) {
-        cartCountElement.classList.add('active'); // Show the badge
-    } else {
-        cartCountElement.classList.remove('active'); // Hide the badge
     }
-}
+
+    function addFavorite(itemId, heartIcon) {
+        fetch(`/add_favorite/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                heartIcon.classList.remove('far');
+                heartIcon.classList.add('fas');
+                heartIcon.style.color = 'red';
+            } else {
+                response.json().then(data => alert('Error: ' + data.error));
+            }
+        }).catch(error => {
+            console.error('Error adding favorite:', error);
+            alert('Failed to add favorite.');
+        });
+    }
+
+    function removeFavorite(itemId, heartIcon) {
+        fetch(`/remove_favorite/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                heartIcon.classList.remove('fas');
+                heartIcon.classList.add('far');
+                heartIcon.style.color = ''
+            } else {
+                response.json().then(data => alert ('Error: ' + data.error));
+            }
+        }).catch(error => {
+            console.error('Error removing favorite:', error);
+            alert('Failed to remove favorite.');
+        });
+    }
+
+    function addToCart(itemId) {
+        fetch(`/add_to_cart/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
+        })
+        .then(response => response.json())
+        .then(data => console.log(data))
+        .catch(error => console.log(error));
+
+        alert("Item added to cart!")
+    }
+
+    function fetchCartCount() {
+        fetch('/get_cart_count', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCartCount(data.cart_count); // Use 'cart_count' as returned by the backend
+            }
+        })
+        .catch(error => console.error('Error fetching cart count:', error));
+        }
+
+
+    function updateCartCount(itemsInCart) {
+        const cartCountElement = document.getElementById('cart-badge');
+        cartCountElement.textContent = itemsInCart;
+
+        if (itemsInCart > 0) {
+            cartCountElement.classList.add('active'); // Show the badge
+        } else {
+            cartCountElement.classList.remove('active'); // Hide the badge
+        }
+    }
 
     // Call fetchCartCount on page load
     document.addEventListener('DOMContentLoaded', fetchCartCount);
 
     function refreshCart() {
-    fetch("/get_cart_status") // Ensure this endpoint exists in your backend
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const cartBadge = document.querySelector("#cart-badge");
+        fetch("/get_cart_status") // Ensure this endpoint exists in your backend
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const cartBadge = document.querySelector("#cart-badge");
 
-                // Calculate total items in the cart
-                const totalItemsCount = Object.values(data.cart).reduce((total, item) => total + item.quantity, 0);
+                    // Calculate total items in the cart
+                    const totalItemsCount = Object.values(data.cart).reduce((total, item) => total + item.quantity, 0);
 
-                // Update the badge
-                cartBadge.textContent = totalItemsCount;
+                    // Update the badge
+                    cartBadge.textContent = totalItemsCount;
 
-                // Show or hide the badge
-                if (totalItemsCount > 0) {
-                    cartBadge.classList.add("active");
-                } else {
-                    cartBadge.classList.remove("active");
+                    // Show or hide the badge
+                    if (totalItemsCount > 0) {
+                        cartBadge.classList.add("active");
+                    } else {
+                        cartBadge.classList.remove("active");
+                    }
                 }
-            }
-        })
-        .catch(error => console.error("Error fetching cart status:", error));
-}
+            })
+            .catch(error => console.error("Error fetching cart status:", error));
+    }
 
-        // Refresh cart every 10 seconds
-        setInterval(refreshCart, 1000);
-        // Initial load
-        refreshCart();
+    // Refresh cart every second
+    setInterval(refreshCart, 1000);
+    // Initial load
+    refreshCart();
 
 
-    </script>
+</script>
 {% endblock %}
 
