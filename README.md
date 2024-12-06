@@ -23,8 +23,8 @@
 - [X] Settings page
 - [X] Connect timeline
 - [X] User favorite items
-- [ ] Real items, not placeholders
-- [ ] Live U-Store data
+- [X] Real items, not placeholders
+- [ ] Live U-Store data (likely not feasible within this semester)
 - [X] Mobile-first category ribbon with population
 - [X] Deliverer hide "declined" orders
 - [X] Improve efficiency (pages should not need to be refreshed to see changes)
@@ -33,7 +33,7 @@
 
 ## For 12/06/2024
 - [ ] Add favorites page
-- [ ] Real items, not placeholders
+- [X] Real items, not placeholders
 - [ ] Items not in stock (likely not feasible)
 - [ ] MOBILE MOBILE MOBILE
 - [ ] Smooth out UX
