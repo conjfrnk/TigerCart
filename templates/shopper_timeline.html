@@ -25,6 +25,16 @@
 
 <hr>
 
+{% if order.claimed_by %}
+    <p><strong>Deliverer Average Rating:</strong>
+        {% if deliverer_avg_rating %}
+            {{ deliverer_avg_rating }} / 5 stars
+        {% else %}
+            No ratings yet.
+        {% endif %}
+    </p>
+{% endif %}
+
 <!-- Items Section -->
 <h2><u>Items</u></h2>
 <table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse; width: 100%;" align="center">
@@ -89,5 +99,41 @@
     setInterval(refreshTimeline, 10000);
     // Initial call to display current status
     refreshTimeline();
+</script>
+
+{% if order.timeline['Delivered'] and order.claimed_by %}
+<h2>Rate Your Deliverer</h2>
+<p>Please select a rating (1-5 stars):</p>
+<select id="deliverer-rating">
+    <option value="1">1 Star</option>
+    <option value="2">2 Stars</option>
+    <option value="3">3 Stars</option>
+    <option value="4">4 Stars</option>
+    <option value="5">5 Stars</option>
+</select>
+<button onclick="rateDeliverer()">Submit Rating</button>
+{% endif %}
+
+<script>
+function rateDeliverer() {
+    const rating = document.getElementById('deliverer-rating').value;
+    fetch('/submit_rating', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            rated_user_id: '{{ order.claimed_by }}',
+            rater_role: 'shopper',
+            rating: rating,
+            order_id: {{ order.id }}
+        })
+    }).then(resp => resp.json()).then(data => {
+        if (data.success) {
+            alert('Rating submitted successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
 </script>
 {% endblock %}
