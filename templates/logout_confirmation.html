@@ -6,7 +6,9 @@
 {% block content %}
 <h1>Logout Confirmation</h1>
 <p>Are you sure that you would like to log out?</p>
-<button onclick="window.location.href='{{ url_for("auth.logoutcas") }}'">Yes</button>
-<button onclick="window.location.href='{{ url_for("home") }}'">No</button>
+{% set auth_logoutcas = "auth.logoutcas" %}
+{% set home = "home" %}
+<button onclick="window.location.href='{{ url_for(auth_logoutcas) }}'">Yes</button>
+<button onclick="window.location.href='{{ url_for(home) }}'">No</button>
 
 {% endblock %}

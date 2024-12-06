@@ -54,7 +54,8 @@
 
     <h2><u>Place Order</u></h2>
     <p>Click the button below to place your order:</p>
-    <button type="button" onclick="window.location.href='{{ url_for("order_confirmation") }}'">Place Order</button>
+    {% set order_confirmation = "order_confirmation" %}
+    <button type="button" onclick="window.location.href='{{ url_for(order_confirmation) }}'">Place Order</button>
 {% else %}
     <p>There are no items in your cart. Please add at least one item to your cart before you place an order!</p>
 {% endif %}
