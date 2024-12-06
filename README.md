@@ -35,9 +35,9 @@
 - [X] Add favorites page
 - [X] Real items, not placeholders
 - [ ] Items not in stock (likely not feasible)
-- [ ] MOBILE MOBILE MOBILE
+- [X] MOBILE MOBILE MOBILE - Can Still Improve Here with testing
 - [ ] Smooth out UX
-- [ ] Rating system (?)
+- [X] Rating system (?)
 - [X] Eye-catching website title w/ hyperlink (which takes users back to home page)
 - [X] Stylize all tables to be like those that appear upon clicking a category in the categories ribbon on the "shop" page
 - [ ] Add Ms. Spraragen's UX/UI design ideas
