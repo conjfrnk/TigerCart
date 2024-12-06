@@ -12,6 +12,7 @@
 {% if cart.items() %}
     <p>Below are the items that are currently in your cart:</p>
     <ul>
+        <div class="table-responsive">
         <table id="cart-table" style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
             <thead style="border: 1px solid rgb(200, 200, 200);">
                 <tr>
@@ -42,13 +43,16 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     
     <hr>
 
     <h2><u>Cost</u></h2>
-    <p align="right" style="margin-right: 350px;"><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
-    <p align="right" style="margin-right: 350px;"><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
-    <h3 align="right" style="color: red; margin-right: 350px;"><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></h3>
+    <div class="cost-section">
+        <p><strong>Subtotal: </strong>$<span id="subtotal">{{ "%.2f"|format(subtotal) }}</span></p>
+        <p><strong>Delivery Fee (10%): </strong>$<span id="delivery-fee">{{ "%.2f"|format(delivery_fee) }}</span></p>
+        <h3 class="total"><strong>Total: </strong>$<span id="total">{{ "%.2f"|format(total) }}</span></h3>
+    </div>
 
     <hr>
 
