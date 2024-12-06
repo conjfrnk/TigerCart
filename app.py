@@ -286,6 +286,10 @@ def shopper_timeline():
 
     deliverer_venmo = None
     deliverer_phone = None
+    deliverer_avg_rating = None
+    if order and order["claimed_by"]:
+        deliverer_avg_rating = get_average_rating(order["claimed_by"], 'deliverer')
+
     if order and order["claimed_by"]:
         user_conn = get_user_db_connection()
         user_cursor = user_conn.cursor()
@@ -911,7 +915,7 @@ def profile():
     user_cursor = user_conn.cursor()
     main_cursor = main_conn.cursor()
 
-    # Fetch user's venmo handle and phone number
+    # If the user updates profile info
     if request.method == "POST":
         venmo_handle = request.form.get("venmo_handle")
         phone_number = request.form.get("phone_number")
@@ -926,6 +930,7 @@ def profile():
         flash("Profile updated successfully!")
         return redirect(url_for("profile"))
 
+    # Fetch venmo handle and phone number
     user = user_cursor.execute(
         "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
         (user_id,),
@@ -938,12 +943,8 @@ def profile():
     # Fetch details for favorite items from items table
     favorite_items = []
     if favorite_item_ids:
-        placeholder = ",".join(
-            "?" for _ in favorite_item_ids
-        )  # Create placeholders for IN clause
-        query = (
-            f"SELECT id, name, price, category FROM items WHERE id IN ({placeholder})"
-        )
+        placeholder = ",".join("?" for _ in favorite_item_ids)  # placeholders for IN clause
+        query = f"SELECT id, name, price, category FROM items WHERE id IN ({placeholder})"
         favorite_items = main_cursor.execute(query, favorite_item_ids).fetchall()
 
     user_conn.close()
@@ -965,6 +966,10 @@ def profile():
         order_data["total"] = round(subtotal, 2)
         orders_with_totals.append(order_data)
 
+    # Get average ratings
+    deliverer_avg_rating = get_average_rating(user_id, 'deliverer')
+    shopper_avg_rating = get_average_rating(user_id, 'shopper')
+
     return render_template(
         "profile.html",
         username=username,
@@ -974,7 +979,10 @@ def profile():
         venmo_handle=user["venmo_handle"] if user else "",
         phone_number=user["phone_number"] if user else "",
         favorites=favorite_items,  # Pass favorite items to the template
+        deliverer_avg_rating=deliverer_avg_rating,
+        shopper_avg_rating=shopper_avg_rating
     )
+
 
 
 @app.route("/get_cart_count", methods=["GET"])
@@ -1028,7 +1036,6 @@ def get_cart_status():
 
 @app.route("/deliverer_timeline/<int:delivery_id>")
 def deliverer_timeline(delivery_id):
-    """Display the deliverer's timeline for a specific delivery."""
     current_username = authenticate()
     user_id = session.get("user_id")
     if not user_id:
@@ -1039,29 +1046,32 @@ def deliverer_timeline(delivery_id):
 
     cursor.execute("SELECT * FROM orders WHERE id = ?", (delivery_id,))
     order_row = cursor.fetchone()
-
-    shopper_venmo = None
-    shopper_phone = None
-    if order_row:
-        user_conn = get_user_db_connection()
-        user_cursor = user_conn.cursor()
-        user_cursor.execute(
-            """SELECT venmo_handle, phone_number
-            FROM users WHERE user_id = ?""",
-            (order_row["user_id"],),
-        )
-        shopper = user_cursor.fetchone()
-        if shopper:
-            shopper_venmo = shopper["venmo_handle"]
-            shopper_phone = shopper["phone_number"]
-        user_conn.close()
-
     conn.close()
 
     if not order_row:
         return "Order not found.", 404
 
     order = dict(order_row)
+
+    # Now we can safely call get_average_rating on order['user_id']
+    shopper_avg_rating = get_average_rating(order["user_id"], 'shopper')
+
+    user_conn = get_user_db_connection()
+    user_cursor = user_conn.cursor()
+    user_cursor.execute(
+        """SELECT venmo_handle, phone_number
+        FROM users WHERE user_id = ?""",
+        (order["user_id"],),
+    )
+    shopper = user_cursor.fetchone()
+    if shopper:
+        shopper_venmo = shopper["venmo_handle"]
+        shopper_phone = shopper["phone_number"]
+    else:
+        shopper_venmo = None
+        shopper_phone = None
+    user_conn.close()
+
     order["timeline"] = json.loads(order.get("timeline", "{}"))
     order["cart"] = json.loads(order.get("cart", "{}"))
 
@@ -1070,8 +1080,10 @@ def deliverer_timeline(delivery_id):
         order=order,
         shopper_venmo=shopper_venmo,
         shopper_phone=shopper_phone,
+        shopper_avg_rating=shopper_avg_rating,
         username=current_username,
     )
+
 
 
 @app.route("/order_details/<int:order_id>")
@@ -1107,6 +1119,120 @@ def order_details(order_id):
         subtotal=subtotal,
         username=current_username,
     )
+
+@app.route("/submit_rating", methods=["POST"])
+def submit_rating():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "error": "Not logged in"}), 401
+
+    data = request.get_json()
+    rated_user_id = data.get("rated_user_id")
+    rater_role = data.get("rater_role")  # 'shopper' or 'deliverer'
+    rating = data.get("rating")
+
+    if not rated_user_id or not rater_role or not rating:
+        return jsonify({"success": False, "error": "Missing fields"}), 400
+
+    # Validate that the order is delivered and that the user is involved in that order:
+    order_id = data.get("order_id")
+    if not order_id:
+        return jsonify({"success": False, "error": "Order ID required"}), 400
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"success": False, "error": "Order not found"}), 404
+
+    # Check if order is delivered
+    timeline = json.loads(order["timeline"])
+    if not timeline.get("Delivered"):
+        return jsonify({"success": False, "error": "Cannot rate before order is delivered"}), 400
+
+    # Check if the user rating is either the shopper or the deliverer involved
+    if rater_role == 'deliverer':
+        # deliverer is rating the shopper
+        # deliverer must be order['claimed_by']
+        if order["claimed_by"] != user_id:
+            return jsonify({"success": False, "error": "You are not authorized to rate this shopper"}), 403
+    elif rater_role == 'shopper':
+        # shopper is rating the deliverer
+        # shopper must be order['user_id']
+        if order["user_id"] != user_id:
+            return jsonify({"success": False, "error": "You are not authorized to rate this deliverer"}), 403
+    else:
+        return jsonify({"success": False, "error": "Invalid role"}), 400
+
+    # Submit the rating
+    if update_rating(rated_user_id, rater_role, int(rating)):
+        return jsonify({"success": True}), 200
+    else:
+        return jsonify({"success": False, "error": "Rating update failed"}), 500
+
+
+def update_rating(user_id, rater_role, rating):
+    """
+    user_id: the user receiving the rating
+    rater_role: 'shopper' or 'deliverer' indicating which rating we update
+    rating: integer rating from 1-5
+    """
+    if rating < 1 or rating > 5:
+        return False
+
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+
+    if rater_role == 'deliverer':
+        # update shopper_rating_sum/shopper_rating_count since deliverer is being rated by a shopper
+        cursor.execute("""
+            UPDATE users
+            SET deliverer_rating_sum = deliverer_rating_sum + ?,
+                deliverer_rating_count = deliverer_rating_count + 1
+            WHERE user_id = ?
+        """, (rating, user_id))
+    elif rater_role == 'shopper':
+        # update deliverer_rating_sum/deliverer_rating_count since shopper is being rated by a deliverer
+        cursor.execute("""
+            UPDATE users
+            SET shopper_rating_sum = shopper_rating_sum + ?,
+                shopper_rating_count = shopper_rating_count + 1
+            WHERE user_id = ?
+        """, (rating, user_id))
+    else:
+        conn.close()
+        return False
+
+    conn.commit()
+    conn.close()
+    return True
+
+def get_average_rating(user_id, role):
+    """
+    role: 'deliverer' or 'shopper'
+    Returns the average rating for the specified role.
+    """
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    if role == 'deliverer':
+        cursor.execute("""
+            SELECT deliverer_rating_sum AS s, deliverer_rating_count AS c
+            FROM users WHERE user_id = ?
+        """, (user_id,))
+    else:
+        cursor.execute("""
+            SELECT shopper_rating_sum AS s, shopper_rating_count AS c
+            FROM users WHERE user_id = ?
+        """, (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row["c"] and row["c"] > 0:
+        return round(row["s"] / row["c"], 1)
+    return None
+
 
 
 if __name__ == "__main__":
