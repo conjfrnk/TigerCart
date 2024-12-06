@@ -64,16 +64,21 @@ def init_user_db():
     conn = get_user_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            user_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            venmo_handle TEXT,
-            phone_number TEXT,
-            cart TEXT DEFAULT '{}'
-        )
-        """
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        user_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        venmo_handle TEXT,
+        phone_number TEXT,
+        cart TEXT DEFAULT '{}',
+        deliverer_rating_sum INTEGER DEFAULT 0,
+        deliverer_rating_count INTEGER DEFAULT 0,
+        shopper_rating_sum INTEGER DEFAULT 0,
+        shopper_rating_count INTEGER DEFAULT 0
     )
+    """
+)
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS favorites (
@@ -85,6 +90,7 @@ def init_user_db():
         )
         """
     )
+
     conn.commit()
     conn.close()
 
