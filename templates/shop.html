@@ -18,12 +18,12 @@
 <h1>Shop</h1>
 <hr>
 <!-- Category Ribbon -->
-    <h2><u>Categories</u></h2>
-    <p>Select the item category that you would like to view:</p>
+<h2><u>Categories</u></h2>
+<p>Select the item category that you would like to view:</p>
 <div class="category-ribbon">
     <div class="categories">
         {% for category in categories %}
-            <button class="category-button" data-category="{{ category }}">{{ category.capitalize() }}</button>
+            <button class="category-button" data-category="{{ category }}" style="text-transform: capitalize;">{{ category }}</button>
         {% endfor %}
     </div>
 </div>
