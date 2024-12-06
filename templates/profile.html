@@ -44,6 +44,25 @@
 
 <hr>
 
+<h2><u>Your Ratings</u></h2>
+<p><strong>As a Deliverer:</strong>
+    {% if deliverer_avg_rating %}
+        {{ deliverer_avg_rating }} / 5 stars
+    {% else %}
+        No deliverer ratings yet.
+    {% endif %}
+</p>
+
+<p><strong>As a Shopper:</strong>
+    {% if shopper_avg_rating %}
+        {{ shopper_avg_rating }} / 5 stars
+    {% else %}
+        No shopper ratings yet.
+    {% endif %}
+</p>
+
+<hr>
+
 <h2><u>Your Favorite Items</u></h2>
 {% if favorites %}
     <table style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
