@@ -160,7 +160,7 @@ function rateShopper() {
     }).then(resp => resp.json()).then(data => {
         if (data.success) {
             alert('Rating submitted successfully!');
-            location.reload();
+            window.location.href = data.redirect_url;
         } else {
             alert('Error: ' + data.error);
         }

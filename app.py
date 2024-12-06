@@ -1169,7 +1169,7 @@ def submit_rating():
 
     # Submit the rating
     if update_rating(rated_user_id, rater_role, int(rating)):
-        return jsonify({"success": True}), 200
+        return jsonify({"success": True, "redirect_url": url_for("home")}), 200
     else:
         return jsonify({"success": False, "error": "Rating update failed"}), 500
 
