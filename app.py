@@ -948,6 +948,7 @@ def profile():
         )
         user_conn.commit()
         user_conn.close()
+        session.pop('_flashes')
         flash("Profile updated successfully!")
         return redirect(url_for("profile"))
 
