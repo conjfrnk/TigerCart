@@ -111,7 +111,15 @@ def home():
         (session["user_id"], username),
     )
     conn.commit()
+
+    user = cursor.execute(
+        "SELECT phone_number, venmo_handle FROM users WHERE user_id = ?",
+        (session["user_id"],),
+    ).fetchone()
     conn.close()
+
+    if not user["phone_number"] or not user["venmo_handle"]:
+        return redirect(url_for("profile"))
 
     return render_template("home.html", username=username)
 
@@ -919,6 +927,14 @@ def profile():
 
     user_cursor = user_conn.cursor()
     main_cursor = main_conn.cursor()
+
+    user = user_cursor.execute(
+        "SELECT phone_number, venmo_handle FROM users WHERE user_id = ?",
+        (session["user_id"],),
+    ).fetchone()
+
+    if not user["phone_number"] or not user["venmo_handle"]:
+        flash("You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.", "warning")
 
     # If the user updates profile info
     if request.method == "POST":
