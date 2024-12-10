@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-""" 
+"""
 auth.py
 Handles authentication with CAS and user sessions.
+Adopted to PostgreSQL (replaced ? with %s in queries).
 """
 
 import re
@@ -14,44 +15,20 @@ from database import get_user_db_connection
 auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
 
-
 def strip_ticket(url):
-    """Remove the CAS ticket parameter from the URL.
-
-    Args:
-        url: The URL to strip the ticket from
-
-    Returns:
-        str: URL with the ticket parameter removed
-    """
     if url is None:
         return "something is badly wrong"
     url = re.sub(r"ticket=[^&]*&?", "", url)
     url = re.sub(r"\?&?$|&$", "", url)
     return url
 
-
 def create_ssl_context():
-    """Create an SSL context for development use.
-
-    Returns:
-        ssl.SSLContext: A configured SSL context for development
-    """
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     return context
 
-
 def validate(ticket):
-    """Validate a CAS login ticket with the server.
-
-    Args:
-        ticket: The CAS ticket to validate
-
-    Returns:
-        str: Username if validation successful, None otherwise
-    """
     val_url = (
         _CAS_URL
         + "validate"
@@ -75,24 +52,13 @@ def validate(ticket):
         return None
     return second_line
 
-
 def authenticate():
-    """Authenticate the remote user and return their username.
-
-    Returns:
-        str: The authenticated username
-
-    Note:
-        This function will redirect to CAS login if needed.
-    """
     if "username" in flask.session:
         return flask.session.get("username")
 
     ticket = flask.request.args.get("ticket")
     if ticket is None:
-        login_url = (
-            _CAS_URL + "login?service=" + parse.quote(flask.request.url)
-        )
+        login_url = _CAS_URL + "login?service=" + parse.quote(flask.request.url)
         abort(redirect(login_url))
 
     username = validate(ticket)
@@ -110,13 +76,14 @@ def authenticate():
     conn = get_user_db_connection()
     cursor = conn.cursor()
 
-    user = cursor.execute(
-        "SELECT user_id FROM users WHERE name = ?", (username,)
-    ).fetchone()
+    cursor.execute("SELECT user_id FROM users WHERE name = %s", (username,))
+    user = cursor.fetchone()
 
     if user is None:
+        # Insert user if not exists
         cursor.execute(
-            "INSERT INTO users (name) VALUES (?)", (username,)
+            "INSERT INTO users (user_id, name) VALUES (%s, %s) ON CONFLICT (user_id) DO NOTHING",
+            (username, username)
         )
         conn.commit()
 
@@ -126,25 +93,13 @@ def authenticate():
     flask.session["user_id"] = user_id
     return username
 
-
 @auth_bp.route("/logoutapp", methods=["GET"])
 def logoutapp():
-    """Log out of the application.
-
-    Returns:
-        template: The logged out page
-    """
     session.clear()
     return render_template("loggedout.html")
 
-
 @auth_bp.route("/logoutcas", methods=["GET"])
 def logoutcas():
-    """Log out of the CAS session.
-
-    Returns:
-        redirect: Redirect to CAS logout page
-    """
     session.clear()
     logout_url = _CAS_URL + "logout"
     return redirect(logout_url)
