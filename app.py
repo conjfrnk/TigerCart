@@ -54,9 +54,7 @@ def get_user_orders(user_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        """SELECT * FROM orders
-        WHERE user_id = %s
-        ORDER BY timestamp DESC""",
+        "SELECT * FROM orders WHERE user_id = %s ORDER BY timestamp DESC",
         (user_id,),
     )
     orders = cursor.fetchall()
@@ -139,8 +137,8 @@ def convert_to_est(timestamp_str):
 def get_delivery_stats(user_id):
     """
     Calculate real delivery stats for a deliverer.
-    Deliveries completed = Orders with status='FULFILLED' and claimed_by=user_id.
-    Earnings = sum of delivery fees (10% of subtotal) from those completed deliveries.
+    Consider a delivery completed if status='FULFILLED' and claimed_by=user_id.
+    We'll sum up all earnings from these deliveries.
     """
     conn = get_main_db_connection()
     cursor = conn.cursor()
@@ -152,16 +150,16 @@ def get_delivery_stats(user_id):
     conn.close()
 
     deliveries_completed = len(completed_orders)
-    total_earnings = 0.0
+    money_made = 0.0
     for order in completed_orders:
         cart = json.loads(order["cart"])
         subtotal = sum(item.get("quantity",0)*item.get("price",0) for item in cart.values())
         earnings = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
-        total_earnings += earnings
+        money_made += earnings
 
     return {
         "deliveries_completed": deliveries_completed,
-        "total_earnings": round(total_earnings, 2)
+        "money_made": round(money_made, 2)
     }
 
 @app.route("/", methods=["GET"])
@@ -901,7 +899,6 @@ def profile():
     user_cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
     favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
 
-    # If needed, fetch favorite items details from items table
     favorite_items = []
     if favorite_item_ids:
         placeholder = ",".join(["%s"]*len(favorite_item_ids))
@@ -944,7 +941,7 @@ def profile():
         favorites=favorite_items,
         deliverer_avg_rating=deliverer_avg_rating,
         shopper_avg_rating=shopper_avg_rating,
-        delivery_stats=delivery_stats  # Now we pass real data to the template
+        delivery_stats=delivery_stats  # now includes money_made
     )
 
 @app.route("/get_cart_count", methods=["GET"])
@@ -1070,7 +1067,7 @@ def submit_rating():
 
     data = request.get_json()
     rated_user_id = data.get("rated_user_id")
-    rater_role = data.get("rater_role")  # 'shopper' or 'deliverer'
+    rater_role = data.get("rater_role")
     rating = data.get("rating")
 
     if not rated_user_id or not rater_role or not rating:
@@ -1093,13 +1090,10 @@ def submit_rating():
     if not timeline.get("Delivered"):
         return jsonify({"success": False, "error": "Cannot rate before order is delivered"}), 400
 
-    # Check authorization
     if rater_role == 'deliverer':
-        # deliverer rating shopper
         if order["claimed_by"] != user_id:
             return jsonify({"success": False, "error": "Not authorized"}), 403
     elif rater_role == 'shopper':
-        # shopper rating deliverer
         if order["user_id"] != user_id:
             return jsonify({"success": False, "error": "Not authorized"}), 403
     else:
