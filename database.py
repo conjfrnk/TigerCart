@@ -74,7 +74,13 @@ def init_user_db():
         deliverer_rating_sum INTEGER DEFAULT 0,
         deliverer_rating_count INTEGER DEFAULT 0,
         shopper_rating_sum INTEGER DEFAULT 0,
-        shopper_rating_count INTEGER DEFAULT 0
+        shopper_rating_count INTEGER DEFAULT 0,
+        orders_placed INTEGER DEFAULT 0,
+        items_purchased INTEGER DEFAULT 0,
+        money_spent REAL DEFAULT 0.0,
+        deliveries_completed INTEGER DEFAULT 0,
+        items_delivered INTEGER DEFAULT 0,
+        money_made REAL DEFAULT 0.0
     )
     """
 )

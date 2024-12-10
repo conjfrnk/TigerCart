@@ -155,86 +155,43 @@
  }
 
  function toggleFavorite(itemId, heartIcon) {
-     const isFavorite = heartIcon.classList.contains('fas');
-     const url = isFavorite ? `/remove_favorite/${itemId}` : `/add_favorite/${itemId}`;
-     const currentCategory = document.querySelector('.category-button.active').getAttribute('data-category');
-     const categoriesDiv = document.querySelector('.categories');
-     const hasFavoritesCategory = Array.from(document.querySelectorAll('.category-button'))
-                                       .some(button => button.getAttribute('data-category') === 'Favorites');
+    const isFavorite = heartIcon.classList.contains('fas');
+    const url = isFavorite ? `/remove_favorite/${itemId}` : `/add_favorite/${itemId}`;
 
-     fetch(url, {
-         method: 'POST',
-         headers: {
-             'Content-Type': 'application/json'
-         }
-     }).then(response => {
-         if (response.ok) {
-             if (isFavorite) {
-                 // Removing from favorites
-                 heartIcon.classList.remove('fas');
-                 heartIcon.classList.add('far');
-                 heartIcon.style.color = '';
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(response => {
+            if (response.ok) {
+                heartIcon.classList.toggle('fas');
+                heartIcon.classList.toggle('far');
+                heartIcon.style.color = heartIcon.classList.contains('fas') ? 'red' : '';
 
-                 // If we're in the Favorites category and it might become empty,
-                 // check if this was the last favorite
-                 if (currentCategory === 'Favorites') {
-                     fetch('/get_category_items?category=Favorites')
-                         .then(response => response.json())
-                         .then(data => {
-                             const remainingFavorites = Object.keys(data.items || {}).length;
-                             if (remainingFavorites <= 1) {
-                                 // Remove Favorites button and switch to first available category
-                                 const favButton = document.querySelector('.category-button[data-category="Favorites"]');
-                                 if (favButton) {
-                                     favButton.remove();
-                                     // Click the first remaining category
-                                     const firstCategory = document.querySelector('.category-button');
-                                     if (firstCategory) firstCategory.click();
-                                 }
-                             } else {
-                                 loadCategoryItems('Favorites');
-                             }
-                         });
-                 } else {
-                     loadCategoryItems(currentCategory);
-                 }
-             } else {
-                 // Adding to favorites
-                 heartIcon.classList.remove('far');
-                 heartIcon.classList.add('fas');
-                 heartIcon.style.color = 'red';
+                if (!isFavorite) {
+                    // Ensure "Favorites" category is added back if not present
+                    if (!document.querySelector('.category-button[data-category="Favorites"]')) {
+                        const favButton = document.createElement('button');
+                        favButton.className = 'category-button';
+                        favButton.setAttribute('data-category', 'Favorites');
+                        favButton.innerHTML = '<i class="fas fa-heart" style="color: red;"></i> Favorites';
+                        document.querySelector('.categories').prepend(favButton);
+                        favButton.addEventListener('click', () => loadCategoryItems('Favorites'));
+                    }
+                } else {
+                    // Check if "Favorites" should be removed
+                    fetch('/get_category_items?category=Favorites')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (Object.keys(data.items || {}).length === 0) {
+                                const favButton = document.querySelector('.category-button[data-category="Favorites"]');
+                                if (favButton) favButton.remove();
+                                document.querySelector('.category-button').click(); // Select another category
+                            }
+                        });
+                }
+            }
+        })
+        .catch(console.error);
+}
 
-                 // If Favorites category doesn't exist yet, add it to the top
-                 if (!hasFavoritesCategory) {
-                     const favButton = document.createElement('button');
-                     favButton.className = 'category-button';
-                     favButton.setAttribute('data-category', 'Favorites');
-                     favButton.style.textTransform = 'none';
-                     favButton.innerHTML = '<i class="fas fa-heart" style="color: red;"></i> Favorites';
-
-                     // Add click handler
-                     favButton.addEventListener('click', function() {
-                         const category = this.getAttribute('data-category');
-                         loadCategoryItems(category);
-                         // Highlight the selected category
-                         document.querySelectorAll('.category-button').forEach(btn => btn.classList.remove('active'));
-                         this.classList.add('active');
-                     });
-
-                     // Insert at the beginning
-                     categoriesDiv.insertBefore(favButton, categoriesDiv.firstChild);
-                 }
-
-                 loadCategoryItems(currentCategory);
-             }
-         } else {
-             response.json().then(data => alert('Error: ' + data.error));
-         }
-     }).catch(error => {
-         console.error('Error updating favorite:', error);
-         alert('Failed to update favorite.');
-     });
- }
 
  function addToCart(itemId) {
      fetch(`/add_to_cart/${itemId}`, {

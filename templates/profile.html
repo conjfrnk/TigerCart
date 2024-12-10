@@ -15,6 +15,7 @@
     {% endif %}
 {% endwith %}
 
+
 <h1>Your Profile</h1>
 
 <hr>
@@ -40,22 +41,23 @@
         <br><br>
         <button type="submit">Save</button>
     </form>
+    
 </ul>
 
 <hr>
 
 <h2><u>Your Ratings</u></h2>
 <p><strong>As a Deliverer:</strong>
-    {% if deliverer_avg_rating %}
-        {{ deliverer_avg_rating }} / 5 stars
+    {% if shopper_avg_rating %}
+        {{ shopper_avg_rating }} / 5 stars 
     {% else %}
         No deliverer ratings yet.
     {% endif %}
 </p>
 
 <p><strong>As a Shopper:</strong>
-    {% if shopper_avg_rating %}
-        {{ shopper_avg_rating }} / 5 stars
+    {% if deliverer_avg_rating %}
+        {{ deliverer_avg_rating }} / 5 stars
     {% else %}
         No shopper ratings yet.
     {% endif %}
@@ -90,10 +92,19 @@
 <hr>
 
 <h2><u>Your Statistics</u></h2>
+<h3>Order Statistics</h3>
+
 <ul>
     <li><strong>Total Number of Orders Placed: </strong>{{ stats.total_orders }}</li>
     <li><strong>Total Number of Items Purchased: </strong>{{ stats.total_items }}</li>
-    <li><strong>Total Amount of Money Spent: </strong>${{ "%.2f"|format(stats.total_spent * 1.1) }}</li>
+    <li><strong>Total Amount of Money Spent: </strong>${{ "%.2f"|format(stats.total_spent) }}</li>
+</ul>
+
+<h3>Delivery Statistics</h3>
+<ul>
+    <li><strong>Total Number of Deliveries Completed: </strong>{{ delivery_stats.deliveries_completed }}</li>
+    <li><strong>Total Number of Items Delivered: </strong>{{ delivery_stats.items_delivered }}</li>
+    <li><strong>Total Amount of Earnings: </strong>${{ "%.2f"|format(delivery_stats.money_made) }}</li>
 </ul>
 
 <hr>
@@ -118,11 +129,14 @@
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.timestamp }}</td>
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.total_items }}</td>
                 <td style="border: 1px solid rgb(200, 200, 200);">{{ order.status }}</td>
-                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(order.total * 1.1) }}</td>
-                <td style="border: 1px solid rgb(200, 200, 200);"><a href="{{ url_for('order_details', order_id=order.id) }}">See More</a></td>
+                <td style="border: 1px solid rgb(200, 200, 200);">{{ "%.2f"|format(order.total) }}</td>
+                <td style="border: 1px solid rgb(200, 200, 200);">
+                    <a href="{{ url_for('order_details', order_id=order.id) }}">See More</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
+        
     </table>
 {% else %}
     <p>You have no orders yet.</p>

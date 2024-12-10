@@ -52,7 +52,7 @@ def get_user_data(user_id):
 
 
 def get_user_orders(user_id):
-    """Fetch all orders made by the user."""
+    """Fetch all orders made by the user and calculate the total cost."""
     conn = get_main_db_connection()
     cursor = conn.cursor()
     orders = cursor.execute(
@@ -61,8 +61,22 @@ def get_user_orders(user_id):
         ORDER BY timestamp DESC""",
         (user_id,),
     ).fetchall()
+
+    orders_with_total = []
+    for order in orders:
+        cart = json.loads(order["cart"]) if order["cart"] else {}
+        subtotal = sum(
+            item.get("quantity", 0) * item.get("price", 0)
+            for item in cart.values()
+        )
+        total = round(subtotal * 1.1, 2)  # Include any additional cost factor
+        order_dict = dict(order)
+        order_dict["total"] = total
+        orders_with_total.append(order_dict)
+
     conn.close()
-    return orders
+    return orders_with_total
+
 
 
 def calculate_user_stats(orders):
@@ -71,19 +85,16 @@ def calculate_user_stats(orders):
     total_items = 0
 
     for order in orders:
-        total_items += order["total_items"]
-        cart = json.loads(order["cart"])
-        subtotal = sum(
-            details.get("quantity", 0) * details.get("price", 0)
-            for details in cart.values()
-        )
-        total_spent += subtotal
+        total_items += order["total_items"]  # Sum the total number of items purchased
+        total_spent += order["total"]  # Use the total cost directly from the order (includes delivery fee)
 
     return {
-        "total_orders": len(orders),
-        "total_spent": round(total_spent, 2),
-        "total_items": total_items,
+        "total_orders": len(orders),  # Count the total number of orders
+        "total_spent": round(total_spent, 2),  # Ensure consistent rounding for the total spent
+        "total_items": total_items,  # Total number of items purchased
     }
+
+
 
 
 def add_phone_number_column():
@@ -119,10 +130,10 @@ def home():
     conn.close()
 
     if not user["phone_number"] or not user["venmo_handle"]:
+        flash("Please update your contact information in your profile.")
         return redirect(url_for("profile"))
 
     return render_template("home.html", username=username)
-
 
 @app.route("/shop")
 def shop():
@@ -133,7 +144,6 @@ def shop():
         response.raise_for_status()
         sample_items = response.json()
 
-        # Get raw database categories and convert to display format
         categories = set()
         for item in sample_items.values():
             db_category = item.get("category", "")
@@ -149,23 +159,17 @@ def shop():
     if not user_id:
         return redirect(url_for("auth.login"))
 
-    # Convert categories to list and sort
-    categories = sorted(list(categories))
-
-    # Check if user has favorites
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT COUNT(*) as count FROM favorites WHERE user_id = ?", (user_id,)
-    )
+    cursor.execute("SELECT COUNT(*) as count FROM favorites WHERE user_id = ?", (user_id,))
     favorite_count = cursor.fetchone()["count"]
-
-    # Add Favorites to the beginning if user has favorites
-    if favorite_count > 0:
-        categories.insert(0, "Favorites")
     conn.close()
 
-    # Get current order
+    if favorite_count > 0:
+        categories = ["Favorites"] + sorted(list(categories))  # Ensure Favorites comes first
+    else:
+        categories = sorted(list(categories))
+
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -179,11 +183,10 @@ def shop():
 
     return render_template(
         "shop.html",
-        categories=categories,  # Now ordered with Favorites first
+        categories=categories,
         current_order=current_order,
         username=username,
     )
-
 
 @app.route("/favorites")
 def favorites_view():
@@ -653,6 +656,13 @@ def place_order():
             cart[item_id]["name"] = item["name"]
 
     total_items = sum(details["quantity"] for details in cart.values())
+    subtotal = sum(
+        details["quantity"] * items[item_id]["price"]
+        for item_id, details in cart.items()
+    )
+    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+    total_cost = round(subtotal + delivery_fee, 2)  # Calculate total cost with delivery fee
+
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
@@ -682,8 +692,20 @@ def place_order():
     conn.commit()
     conn.close()
 
-    user_cursor.execute("UPDATE users SET cart = '{}' WHERE user_id = ?", (user_id,))
+    # Update user statistics
+    user_cursor.execute(
+        """
+        UPDATE users 
+        SET orders_placed = orders_placed + 1,
+            items_purchased = items_purchased + ?,
+            money_spent = money_spent + ?
+        WHERE user_id = ?;
+        """,
+        (total_items, total_cost, user_id),  # Use total_cost instead of subtotal
+    )
 
+    # Clear the user's cart
+    user_cursor.execute("UPDATE users SET cart = '{}' WHERE user_id = ?", (user_id,))
     user_conn.commit()
     user_conn.close()
 
@@ -788,7 +810,7 @@ def update_checklist():
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT timeline, claimed_by FROM orders WHERE id = ?",
+        "SELECT timeline, claimed_by, total_items, cart FROM orders WHERE id = ?",
         (order_id,),
     )
     order = cursor.fetchone()
@@ -853,6 +875,32 @@ def update_checklist():
             )
 
     timeline[step] = checked
+
+    # If the step is "Delivered" and it has been marked as completed, update statistics
+    if step == "Delivered" and checked:
+        deliverer_id = order["claimed_by"]
+        if deliverer_id:
+            cart = json.loads(order["cart"])
+            subtotal = sum(
+                item.get("quantity", 0) * item.get("price", 0) for item in cart.values()
+            )
+            earnings = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+
+            conn_user = get_user_db_connection()
+            cursor_user = conn_user.cursor()
+            cursor_user.execute(
+                """
+                UPDATE users
+                SET deliveries_completed = deliveries_completed + 1,
+                    items_delivered = items_delivered + ?,
+                    money_made = money_made + ?
+                WHERE user_id = ?;
+                """,
+                (order["total_items"], earnings, deliverer_id),
+            )
+            conn_user.commit()
+            conn_user.close()
+
     cursor.execute(
         "UPDATE orders SET timeline = ? WHERE id = ?",
         (json.dumps(timeline), order_id),
@@ -921,90 +969,85 @@ def profile():
         return redirect(url_for("auth.login"))
     user_id = session["user_id"]
 
-    # Connect to both databases
     user_conn = get_user_db_connection()
-    main_conn = get_main_db_connection()
-
     user_cursor = user_conn.cursor()
-    main_cursor = main_conn.cursor()
 
-    user = user_cursor.execute(
-        "SELECT phone_number, venmo_handle FROM users WHERE user_id = ?",
-        (session["user_id"],),
-    ).fetchone()
-
-    if not user["phone_number"] or not user["venmo_handle"]:
-        flash("You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.", "warning")
-
-    # If the user updates profile info
     if request.method == "POST":
+        # Retrieve form data
         venmo_handle = request.form.get("venmo_handle")
         phone_number = request.form.get("phone_number")
+
+        # Update user details in the database
         user_cursor.execute(
-            """UPDATE users
-            SET venmo_handle = ?, phone_number = ?
-            WHERE user_id = ?""",
+            "UPDATE users SET venmo_handle = ?, phone_number = ? WHERE user_id = ?",
             (venmo_handle, phone_number, user_id),
         )
         user_conn.commit()
-        user_conn.close()
-        session.pop('_flashes')
-        flash("Profile updated successfully!")
-        return redirect(url_for("profile"))
+        flash("Your contact information has been updated.")
 
-    # Fetch venmo handle and phone number
+    # Fetch user details
     user = user_cursor.execute(
-        "SELECT venmo_handle, phone_number FROM users WHERE user_id = ?",
+        "SELECT venmo_handle, phone_number, orders_placed, items_purchased, money_spent FROM users WHERE user_id = ?",
         (user_id,),
     ).fetchone()
 
-    # Fetch favorite item_ids
+    orders = get_user_orders(user_id)
+    stats = {
+        "total_orders": user["orders_placed"],
+        "total_items": user["items_purchased"],
+        "total_spent": user["money_spent"],
+    }
+
+    # Fetch delivery statistics
+    delivery_stats = user_cursor.execute(
+        """
+        SELECT deliveries_completed, items_delivered, money_made
+        FROM users WHERE user_id = ?;
+        """,
+        (user_id,),
+    ).fetchone()
+
+    delivery_data = {
+        "deliveries_completed": delivery_stats["deliveries_completed"],
+        "items_delivered": delivery_stats["items_delivered"],
+        "money_made": round(delivery_stats["money_made"], 2),
+    }
+
+    # Fetch favorite item IDs
     user_cursor.execute("SELECT item_id FROM favorites WHERE user_id = ?", (user_id,))
     favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
 
-    # Fetch details for favorite items from items table
+    # Fetch favorite item details
     favorite_items = []
     if favorite_item_ids:
-        placeholder = ",".join("?" for _ in favorite_item_ids)  # placeholders for IN clause
-        query = f"SELECT id, name, price, category FROM items WHERE id IN ({placeholder})"
-        favorite_items = main_cursor.execute(query, favorite_item_ids).fetchall()
+        conn_main = get_main_db_connection()
+        cursor_main = conn_main.cursor()
+        placeholders = ', '.join(['?'] * len(favorite_item_ids))
+        cursor_main.execute(
+            f"SELECT name, price, category FROM items WHERE store_code IN ({placeholders})",
+            favorite_item_ids
+        )
+        favorite_items = [dict(row) for row in cursor_main.fetchall()]
+        conn_main.close()
+
+    # Calculate average ratings
+    deliverer_avg_rating = get_average_rating(user_id, "deliverer")
+    shopper_avg_rating = get_average_rating(user_id, "shopper")
 
     user_conn.close()
-    main_conn.close()
-
-    # Fetch user data, orders, and stats
-    user_profile = get_user_data(user_id)
-    orders = get_user_orders(user_id)
-    stats = calculate_user_stats(orders)
-
-    orders_with_totals = []
-    for order in orders:
-        cart = json.loads(order["cart"])
-        subtotal = sum(
-            details.get("quantity", 0) * details.get("price", 0)
-            for item_id, details in cart.items()
-        )
-        order_data = dict(order)
-        order_data["total"] = round(subtotal, 2)
-        orders_with_totals.append(order_data)
-
-    # Get average ratings
-    deliverer_avg_rating = get_average_rating(user_id, 'deliverer')
-    shopper_avg_rating = get_average_rating(user_id, 'shopper')
 
     return render_template(
         "profile.html",
         username=username,
-        orders=orders_with_totals,
+        orders=orders,
         stats=stats,
-        user_profile=user_profile,
-        venmo_handle=user["venmo_handle"] if user else "",
-        phone_number=user["phone_number"] if user else "",
-        favorites=favorite_items,  # Pass favorite items to the template
+        delivery_stats=delivery_data,
         deliverer_avg_rating=deliverer_avg_rating,
-        shopper_avg_rating=shopper_avg_rating
+        shopper_avg_rating=shopper_avg_rating,
+        venmo_handle=user["venmo_handle"],
+        phone_number=user["phone_number"],
+        favorites=favorite_items,
     )
-
 
 
 @app.route("/get_cart_count", methods=["GET"])
@@ -1217,7 +1260,6 @@ def update_rating(user_id, rater_role, rating):
     cursor = conn.cursor()
 
     if rater_role == 'deliverer':
-        # update shopper_rating_sum/shopper_rating_count since deliverer is being rated by a shopper
         cursor.execute("""
             UPDATE users
             SET deliverer_rating_sum = deliverer_rating_sum + ?,
@@ -1225,16 +1267,12 @@ def update_rating(user_id, rater_role, rating):
             WHERE user_id = ?
         """, (rating, user_id))
     elif rater_role == 'shopper':
-        # update deliverer_rating_sum/deliverer_rating_count since shopper is being rated by a deliverer
         cursor.execute("""
             UPDATE users
             SET shopper_rating_sum = shopper_rating_sum + ?,
                 shopper_rating_count = shopper_rating_count + 1
             WHERE user_id = ?
         """, (rating, user_id))
-    else:
-        conn.close()
-        return False
 
     conn.commit()
     conn.close()
@@ -1262,6 +1300,19 @@ def get_average_rating(user_id, role):
     if row and row["c"] and row["c"] > 0:
         return round(row["s"] / row["c"], 1)
     return None
+
+def validate_orders():
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, cart FROM orders")
+    orders = cursor.fetchall()
+
+    for order in orders:
+        try:
+            json.loads(order["cart"])  # Ensure the cart is valid JSON
+        except (json.JSONDecodeError, TypeError):
+            print(f"Invalid cart data in order ID {order['id']}")
+    conn.close()
 
 # Define EST as UTC-5, without DST changes
 EST = timezone(timedelta(hours=-5))
