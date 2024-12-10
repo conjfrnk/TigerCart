@@ -743,7 +743,7 @@ def accept_delivery(delivery_id):
     update_order_claim_status(user_id, delivery_id)
     return redirect(url_for("deliverer_timeline", delivery_id=delivery_id))
 
-@app.route("/decline_delivery/<delivery_id>", methods=["POST"])
+@app.route("/decline_delivery/<delivery_id>", methods=["POST"], endpoint="decline_delivery")
 def decline_delivery_route(delivery_id):
     response = requests.post(
         f"{SERVER_URL}/decline_delivery/{delivery_id}",
