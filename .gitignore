@@ -1,3 +1,4 @@
+secrets.txt
 *.sqlite3
 
 # Virtualenv
