@@ -128,9 +128,13 @@ def update_rating(user_id, rater_role, rating):
     conn.close()
     return True
 
-def convert_to_est(timestamp_str):
-    dt_utc = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-    dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+def convert_to_est(dt_utc):
+    # dt_utc is already a datetime object with a UTC timezone or naive (assume UTC)
+    if dt_utc.tzinfo is None:
+        # If it's a naive datetime, attach UTC tzinfo
+        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+
+    EST = timezone(timedelta(hours=-5))
     dt_est = dt_utc.astimezone(EST)
     return dt_est.strftime("%Y-%m-%d %H:%M EST")
 
