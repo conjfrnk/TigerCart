@@ -74,15 +74,13 @@
 <script>
     const currentOrderId = "{{ order['id'] }}";
 
-    // Check if the order ID has changed and reset `pageReload` if necessary
+    // Check if different orderId
     if (localStorage.getItem('currentOrderId') !== currentOrderId) {
-        console.log("New order detected. Resetting pageReload.");
         localStorage.setItem('currentOrderId', currentOrderId);
-        localStorage.setItem('pageReload', 'true'); // Reset for the new order
+        localStorage.setItem('pageReload', 'true');
     }
 
     let pageReload = localStorage.getItem('pageReload') === 'true';
-    console.log("Initial pageReload state:", pageReload);
 
     function refreshTimeline() {
         fetch("{{ url_for('order_status', order_id=order['id']) }}")
@@ -104,9 +102,8 @@
                     }
                 });
                 if (timeline['Order Accepted'] && pageReload) {
-                    console.log("Triggering page reload for Order Accepted");
-                    localStorage.setItem('pageReload', 'false'); // Persist state as false
-                    location.reload(); // Reload the page
+                    localStorage.setItem('pageReload', 'false'); // Only one page reload
+                    location.reload();
                 }
             })
             .catch(error => console.error("Error fetching order status:", error));
