@@ -17,6 +17,21 @@
 
 <h1>Shop</h1>
 <hr>
+<h2><u>Current Cart</u></h2>
+<p>Click the button below to view your current cart:</p>
+<div class="cart-container">
+    <!-- View Cart Button w/ Cart Icon -->
+    <div class="cart-button-container">
+        <a href="/cart_view" class="cart-link"><i class="fas fa-shopping-cart"></i>  View Cart</a>
+    </div>
+
+    <!-- Cart Badge -->
+    <div class="cart-badge-container">
+        <span class="cart-badge" id="cart-badge">0</span>
+    
+</div>
+<hr>
+
 <!-- Category Ribbon -->
 <h2><u>Categories</u></h2>
 <p>Select the item category that you would like to view:</p>
@@ -41,21 +56,7 @@
     <!-- Items will be loaded here dynamically -->
 </div>
 
-<!-- Current Cart -->
-<hr>
-<h2><u>Current Cart</u></h2>
-<p>Click the button below to view your current cart:</p>
-<div class="cart-container">
-    <!-- View Cart Button w/ Cart Icon -->
-    <div class="cart-button-container">
-        <a href="/cart_view" class="cart-link"><i class="fas fa-shopping-cart"></i>  View Cart</a>
-    </div>
 
-    <!-- Cart Badge -->
-    <div class="cart-badge-container">
-        <span class="cart-badge" id="cart-badge">0</span>
-    </div>
-</div>
 
 {% if current_order %}
 <hr>
