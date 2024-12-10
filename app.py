@@ -2,7 +2,9 @@
 """
 app.py
 Main application logic for the U-Store web application using PostgreSQL.
-Credentials are read from secrets.txt by database.py, and DATABASE_URL is constructed there.
+Loads credentials from secrets.txt via database.py and uses psycopg2.
+
+This version includes code to compute real delivery stats and provide `delivery_stats` to the profile template.
 """
 
 import json
@@ -52,7 +54,10 @@ def get_user_orders(user_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM orders WHERE user_id = %s ORDER BY timestamp DESC", (user_id,)
+        """SELECT * FROM orders
+        WHERE user_id = %s
+        ORDER BY timestamp DESC""",
+        (user_id,),
     )
     orders = cursor.fetchall()
     conn.close()
@@ -69,36 +74,26 @@ def calculate_user_stats(orders):
             for details in cart.values()
         )
         total_spent += subtotal
+
     return {
         "total_orders": len(orders),
         "total_spent": round(total_spent, 2),
         "total_items": total_items,
     }
 
-def add_phone_number_column():
-    # For Postgres, already included. If needed:
-    # ALTER TABLE users ADD COLUMN phone_number TEXT;
-    pass
-
-def convert_to_est(timestamp_str):
-    dt_utc = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-    dt_utc = dt_utc.replace(tzinfo=timezone.utc)
-    dt_est = dt_utc.astimezone(EST)
-    return dt_est.strftime("%Y-%m-%d %H:%M EST")
-
 def get_average_rating(user_id, role):
     conn = get_user_db_connection()
     cursor = conn.cursor()
     if role == 'deliverer':
-        cursor.execute(
-            "SELECT deliverer_rating_sum AS s, deliverer_rating_count AS c FROM users WHERE user_id = %s",
-            (user_id,)
-        )
+        cursor.execute("""
+            SELECT deliverer_rating_sum AS s, deliverer_rating_count AS c
+            FROM users WHERE user_id = %s
+        """, (user_id,))
     else:
-        cursor.execute(
-            "SELECT shopper_rating_sum AS s, shopper_rating_count AS c FROM users WHERE user_id = %s",
-            (user_id,)
-        )
+        cursor.execute("""
+            SELECT shopper_rating_sum AS s, shopper_rating_count AS c
+            FROM users WHERE user_id = %s
+        """, (user_id,))
     row = cursor.fetchone()
     conn.close()
     if row and row["c"] and row["c"] > 0:
@@ -110,34 +105,64 @@ def update_rating(user_id, rater_role, rating):
         return False
     conn = get_user_db_connection()
     cursor = conn.cursor()
+
     if rater_role == 'deliverer':
-        # deliverer is being rated by a shopper
-        cursor.execute(
-            """
+        # deliverer being rated by shopper
+        cursor.execute("""
             UPDATE users
             SET deliverer_rating_sum = deliverer_rating_sum + %s,
                 deliverer_rating_count = deliverer_rating_count + 1
             WHERE user_id = %s
-            """,
-            (rating, user_id)
-        )
+        """, (rating, user_id))
     elif rater_role == 'shopper':
-        # shopper is being rated by a deliverer
-        cursor.execute(
-            """
+        # shopper being rated by deliverer
+        cursor.execute("""
             UPDATE users
             SET shopper_rating_sum = shopper_rating_sum + %s,
                 shopper_rating_count = shopper_rating_count + 1
             WHERE user_id = %s
-            """,
-            (rating, user_id)
-        )
+        """, (rating, user_id))
     else:
         conn.close()
         return False
+
     conn.commit()
     conn.close()
     return True
+
+def convert_to_est(timestamp_str):
+    dt_utc = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+    dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+    dt_est = dt_utc.astimezone(EST)
+    return dt_est.strftime("%Y-%m-%d %H:%M EST")
+
+def get_delivery_stats(user_id):
+    """
+    Calculate real delivery stats for a deliverer.
+    Deliveries completed = Orders with status='FULFILLED' and claimed_by=user_id.
+    Earnings = sum of delivery fees (10% of subtotal) from those completed deliveries.
+    """
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT cart FROM orders WHERE claimed_by = %s AND status = 'FULFILLED'",
+        (user_id,)
+    )
+    completed_orders = cursor.fetchall()
+    conn.close()
+
+    deliveries_completed = len(completed_orders)
+    total_earnings = 0.0
+    for order in completed_orders:
+        cart = json.loads(order["cart"])
+        subtotal = sum(item.get("quantity",0)*item.get("price",0) for item in cart.values())
+        earnings = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+        total_earnings += earnings
+
+    return {
+        "deliveries_completed": deliveries_completed,
+        "total_earnings": round(total_earnings, 2)
+    }
 
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
@@ -766,7 +791,7 @@ def update_checklist():
             previous_step = steps[step_index - 1]
             if not timeline.get(previous_step, False):
                 conn.close()
-                return jsonify({"success": False, "error": "Previous step not completed."}), 400
+                return jsonify({"success": False, "error": "Previous step must be completed first."}), 400
     else:
         if any(timeline.get(steps[i], False) for i in range(step_index + 1, len(steps))):
             conn.close()
@@ -839,6 +864,7 @@ def profile():
 
     user_conn = get_user_db_connection()
     main_conn = get_main_db_connection()
+
     user_cursor = user_conn.cursor()
     main_cursor = main_conn.cursor()
 
@@ -875,9 +901,10 @@ def profile():
     user_cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
     favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
 
+    # If needed, fetch favorite items details from items table
     favorite_items = []
     if favorite_item_ids:
-        placeholder = ",".join(["%s" for _ in favorite_item_ids])
+        placeholder = ",".join(["%s"]*len(favorite_item_ids))
         query = f"SELECT store_code as id, name, price, category FROM items WHERE store_code IN ({placeholder})"
         main_cursor.execute(query, favorite_item_ids)
         favorite_items = main_cursor.fetchall()
@@ -903,6 +930,9 @@ def profile():
     deliverer_avg_rating = get_average_rating(user_id, 'deliverer')
     shopper_avg_rating = get_average_rating(user_id, 'shopper')
 
+    # Compute delivery stats for the user as a deliverer
+    delivery_stats = get_delivery_stats(user_id)
+
     return render_template(
         "profile.html",
         username=username,
@@ -913,7 +943,8 @@ def profile():
         phone_number=user["phone_number"] if user else "",
         favorites=favorite_items,
         deliverer_avg_rating=deliverer_avg_rating,
-        shopper_avg_rating=shopper_avg_rating
+        shopper_avg_rating=shopper_avg_rating,
+        delivery_stats=delivery_stats  # Now we pass real data to the template
     )
 
 @app.route("/get_cart_count", methods=["GET"])
@@ -1062,6 +1093,7 @@ def submit_rating():
     if not timeline.get("Delivered"):
         return jsonify({"success": False, "error": "Cannot rate before order is delivered"}), 400
 
+    # Check authorization
     if rater_role == 'deliverer':
         # deliverer rating shopper
         if order["claimed_by"] != user_id:
