@@ -71,16 +71,26 @@
     {% endfor %}
 </div>
 
+<!-- Hidden modal for rating deliverer -->
+<div id="rating-modal" style="display: none; position: fixed; top: 50%; left: 50%;
+     transform: translate(-50%, -50%); background: white; padding: 20px;
+     border: 1px solid #ccc; z-index: 1000;">
+    <h2>Rate Your Deliverer</h2>
+    <p>Please select a rating (1-5 stars):</p>
+    <select id="deliverer-rating">
+        <option value="1">1 Star</option>
+        <option value="2">2 Stars</option>
+        <option value="3">3 Stars</option>
+        <option value="4">4 Stars</option>
+        <option value="5">5 Stars</option>
+    </select>
+    <button onclick="rateDeliverer()">Submit Rating</button>
+</div>
+<div id="modal-overlay" style="display:none; position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(0,0,0,0.5);z-index:999;"></div>
+
 <script>
     const currentOrderId = "{{ order['id'] }}";
-
-    // Check if different orderId
-    if (localStorage.getItem('currentOrderId') !== currentOrderId) {
-        localStorage.setItem('currentOrderId', currentOrderId);
-        localStorage.setItem('pageReload', 'true');
-    }
-
-    let pageReload = localStorage.getItem('pageReload') === 'true';
 
     function refreshTimeline() {
         fetch("{{ url_for('order_status', order_id=order['id']) }}")
@@ -101,53 +111,45 @@
                         }
                     }
                 });
-                if (timeline['Order Accepted'] && pageReload) {
-                    localStorage.setItem('pageReload', 'false'); // Only one page reload
-                    location.reload();
+
+                // Check if delivered and we have a claimed_by and not shopper_rated yet
+                {% if order.claimed_by and not order.shopper_rated %}
+                if (timeline['Delivered']) {
+                    showRatingModal();
                 }
+                {% endif %}
             })
             .catch(error => console.error("Error fetching order status:", error));
     }
 
-    // Refresh the timeline every 10 seconds
+    function showRatingModal() {
+        document.getElementById('rating-modal').style.display = 'block';
+        document.getElementById('modal-overlay').style.display = 'block';
+    }
+
+    function rateDeliverer() {
+        const rating = document.getElementById('deliverer-rating').value;
+        fetch('/submit_rating', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                rated_user_id: '{{ order.claimed_by }}',
+                rater_role: 'shopper',
+                rating: rating,
+                order_id: {{ order.id }}
+            })
+        }).then(resp => resp.json()).then(data => {
+            if (data.success) {
+                alert('Rating submitted successfully!');
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+
+    // Refresh every 10 seconds
     setInterval(refreshTimeline, 10000);
-    // Initial call to display current status
     refreshTimeline();
-</script>
-
-{% if order.timeline['Delivered'] and order.claimed_by %}
-<h2>Rate Your Deliverer</h2>
-<p>Please select a rating (1-5 stars):</p>
-<select id="deliverer-rating">
-    <option value="1">1 Star</option>
-    <option value="2">2 Stars</option>
-    <option value="3">3 Stars</option>
-    <option value="4">4 Stars</option>
-    <option value="5">5 Stars</option>
-</select>
-<button onclick="rateDeliverer()">Submit Rating</button>
-{% endif %}
-
-<script>
-function rateDeliverer() {
-    const rating = document.getElementById('deliverer-rating').value;
-    fetch('/submit_rating', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            rated_user_id: '{{ order.claimed_by }}',
-            rater_role: 'shopper',
-            rating: rating,
-            order_id: {{ order.id }}
-        })
-    }).then(resp => resp.json()).then(data => {
-        if (data.success) {
-            alert('Rating submitted successfully!');
-            window.location.href = data.redirect_url;
-        } else {
-            alert('Error: ' + data.error);
-        }
-    });
-}
 </script>
 {% endblock %}

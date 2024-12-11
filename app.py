@@ -1290,17 +1290,11 @@ def submit_rating():
     rated_user_id = data.get("rated_user_id")
     rater_role = data.get("rater_role")
     rating = data.get("rating")
+    order_id = data.get("order_id")
 
-    if not rated_user_id or not rater_role or not rating:
+    if not (rated_user_id and rater_role and rating and order_id):
         return (
             jsonify({"success": False, "error": "Missing fields"}),
-            400,
-        )
-
-    order_id = data.get("order_id")
-    if not order_id:
-        return (
-            jsonify({"success": False, "error": "Order ID required"}),
             400,
         )
 
@@ -1308,9 +1302,9 @@ def submit_rating():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
     order = cursor.fetchone()
-    conn.close()
 
     if not order:
+        conn.close()
         return (
             jsonify({"success": False, "error": "Order not found"}),
             404,
@@ -1318,6 +1312,7 @@ def submit_rating():
 
     timeline = json.loads(order["timeline"])
     if not timeline.get("Delivered"):
+        conn.close()
         return (
             jsonify(
                 {
@@ -1328,33 +1323,67 @@ def submit_rating():
             400,
         )
 
+    # Authorization check
     if rater_role == "deliverer":
         if order["claimed_by"] != user_id:
+            conn.close()
             return (
                 jsonify({"success": False, "error": "Not authorized"}),
                 403,
             )
     elif rater_role == "shopper":
         if order["user_id"] != user_id:
+            conn.close()
             return (
                 jsonify({"success": False, "error": "Not authorized"}),
                 403,
             )
     else:
+        conn.close()
         return jsonify({"success": False, "error": "Invalid role"}), 400
 
-    if update_rating(rated_user_id, rater_role, int(rating)):
-        return (
-            jsonify({"success": True, "redirect_url": url_for("home")}),
-            200,
-        )
-    else:
+    # Update the rating in users table
+    if not update_rating(rated_user_id, rater_role, int(rating)):
+        conn.close()
         return (
             jsonify(
                 {"success": False, "error": "Rating update failed"}
             ),
             500,
         )
+
+    # Mark that this user role has rated
+    if rater_role == "deliverer":
+        cursor.execute(
+            "UPDATE orders SET deliverer_rated = TRUE WHERE id = %s",
+            (order_id,),
+        )
+    else:
+        cursor.execute(
+            "UPDATE orders SET shopper_rated = TRUE WHERE id = %s",
+            (order_id,),
+        )
+
+    # Check if both have rated
+    cursor.execute(
+        "SELECT shopper_rated, deliverer_rated FROM orders WHERE id = %s",
+        (order_id,),
+    )
+    row = cursor.fetchone()
+    if row["shopper_rated"] and row["deliverer_rated"]:
+        # Mark order as FULFILLED
+        cursor.execute(
+            "UPDATE orders SET status = 'FULFILLED' WHERE id = %s",
+            (order_id,),
+        )
+
+    conn.commit()
+    conn.close()
+
+    return (
+        jsonify({"success": True, "redirect_url": url_for("home")}),
+        200,
+    )
 
 
 if __name__ == "__main__":

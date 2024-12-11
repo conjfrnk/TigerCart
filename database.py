@@ -51,7 +51,7 @@ def get_user_db_connection():
 def init_user_db():
     """
     Initializes the user database with necessary tables.
-    Only create 'users' here. We'll create 'favorites' later once 'items' exist.
+    Only create 'users' here.
     """
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -77,13 +77,13 @@ def init_user_db():
 
 def init_main_db():
     """
-    Initializes the main database with necessary tables.
-    Must run after init_user_db() so that 'users' table exists before referencing it in 'orders'.
+    Initializes the main database with necessary tables and adds migration for new columns.
+    Must run after init_user_db().
     """
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
-    # Create items first
+    # Create items table
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS items (
@@ -95,7 +95,7 @@ def init_main_db():
         """
     )
 
-    # Create orders now that users exist
+    # Create orders table
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS orders (
@@ -113,14 +113,19 @@ def init_main_db():
         """
     )
 
+    # Database migration: Add shopper_rated and deliverer_rated columns if not exist
+    cursor.execute(
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS shopper_rated BOOLEAN DEFAULT FALSE"
+    )
+    cursor.execute(
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS deliverer_rated BOOLEAN DEFAULT FALSE"
+    )
+
     conn.commit()
     conn.close()
 
 
 def create_favorites_table():
-    """
-    Now that both 'users' and 'items' are created, we can safely create 'favorites'.
-    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -147,7 +152,6 @@ def populate_items_from_csv(filename="items.csv"):
     cursor.execute("DELETE FROM items")
 
     if not os.path.exists(filename):
-        # If items.csv doesn't exist, skip population
         conn.commit()
         conn.close()
         return
@@ -155,8 +159,6 @@ def populate_items_from_csv(filename="items.csv"):
     current_category = None
     with open(filename, "r") as csvfile:
         csvreader = csv.reader(csvfile)
-        # If the CSV has a header, uncomment next line:
-        # next(csvreader, None)
         for row in csvreader:
             if not any(row):
                 continue
@@ -165,8 +167,7 @@ def populate_items_from_csv(filename="items.csv"):
                 current_category = row[0]
                 continue
 
-            # Adjust indexing according to your CSV format
-            if len(row) >= 4 and row[2]:  # ensure store_code is present
+            if len(row) >= 4 and row[2]:
                 name = row[0]
                 store_code = row[2]
                 price_str = row[3] if row[3] else "0.0"
@@ -190,14 +191,7 @@ def populate_items_from_csv(filename="items.csv"):
 
 
 if __name__ == "__main__":
-    # 1. Create users (no favorites yet)
     init_user_db()
-
-    # 2. Create items and orders
     init_main_db()
-
-    # 3. Populate items now that items table exists
     populate_items_from_csv()
-
-    # 4. Now that items exist, create favorites
     create_favorites_table()
