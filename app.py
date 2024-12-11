@@ -42,6 +42,7 @@ DELIVERY_FEE_PERCENTAGE = 0.1
 
 EST = timezone(timedelta(hours=-5))
 
+
 def get_user_data(user_id):
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -49,6 +50,7 @@ def get_user_data(user_id):
     user = cursor.fetchone()
     conn.close()
     return user
+
 
 def get_user_orders(user_id):
     conn = get_main_db_connection()
@@ -60,6 +62,7 @@ def get_user_orders(user_id):
     orders = cursor.fetchall()
     conn.close()
     return orders
+
 
 def calculate_user_stats(orders):
     total_spent = 0
@@ -79,24 +82,32 @@ def calculate_user_stats(orders):
         "total_items": total_items,
     }
 
+
 def get_average_rating(user_id, role):
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    if role == 'deliverer':
-        cursor.execute("""
+    if role == "deliverer":
+        cursor.execute(
+            """
             SELECT deliverer_rating_sum AS s, deliverer_rating_count AS c
             FROM users WHERE user_id = %s
-        """, (user_id,))
+        """,
+            (user_id,),
+        )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT shopper_rating_sum AS s, shopper_rating_count AS c
             FROM users WHERE user_id = %s
-        """, (user_id,))
+        """,
+            (user_id,),
+        )
     row = cursor.fetchone()
     conn.close()
     if row and row["c"] and row["c"] > 0:
         return round(row["s"] / row["c"], 1)
     return None
+
 
 def update_rating(user_id, rater_role, rating):
     if rating < 1 or rating > 5:
@@ -104,22 +115,28 @@ def update_rating(user_id, rater_role, rating):
     conn = get_user_db_connection()
     cursor = conn.cursor()
 
-    if rater_role == 'deliverer':
+    if rater_role == "deliverer":
         # deliverer being rated by shopper
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE users
             SET deliverer_rating_sum = deliverer_rating_sum + %s,
                 deliverer_rating_count = deliverer_rating_count + 1
             WHERE user_id = %s
-        """, (rating, user_id))
-    elif rater_role == 'shopper':
+        """,
+            (rating, user_id),
+        )
+    elif rater_role == "shopper":
         # shopper being rated by deliverer
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE users
             SET shopper_rating_sum = shopper_rating_sum + %s,
                 shopper_rating_count = shopper_rating_count + 1
             WHERE user_id = %s
-        """, (rating, user_id))
+        """,
+            (rating, user_id),
+        )
     else:
         conn.close()
         return False
@@ -127,6 +144,7 @@ def update_rating(user_id, rater_role, rating):
     conn.commit()
     conn.close()
     return True
+
 
 def convert_to_est(dt_utc):
     # dt_utc is already a datetime object with a UTC timezone or naive (assume UTC)
@@ -138,6 +156,7 @@ def convert_to_est(dt_utc):
     dt_est = dt_utc.astimezone(EST)
     return dt_est.strftime("%Y-%m-%d %H:%M EST")
 
+
 def get_delivery_stats(user_id):
     """
     Calculate real delivery stats for a deliverer.
@@ -148,7 +167,7 @@ def get_delivery_stats(user_id):
     cursor = conn.cursor()
     cursor.execute(
         "SELECT cart FROM orders WHERE claimed_by = %s AND status = 'FULFILLED'",
-        (user_id,)
+        (user_id,),
     )
     completed_orders = cursor.fetchall()
     conn.close()
@@ -157,14 +176,18 @@ def get_delivery_stats(user_id):
     money_made = 0.0
     for order in completed_orders:
         cart = json.loads(order["cart"])
-        subtotal = sum(item.get("quantity",0)*item.get("price",0) for item in cart.values())
+        subtotal = sum(
+            item.get("quantity", 0) * item.get("price", 0)
+            for item in cart.values()
+        )
         earnings = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
         money_made += earnings
 
     return {
         "deliveries_completed": deliveries_completed,
-        "money_made": round(money_made, 2)
+        "money_made": round(money_made, 2),
     }
+
 
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
@@ -194,11 +217,14 @@ def home():
 
     return render_template("home.html", username=username)
 
+
 @app.route("/shop")
 def shop():
     username = authenticate()
     try:
-        response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
         response.raise_for_status()
         sample_items = response.json()
 
@@ -222,7 +248,7 @@ def shop():
     cursor = conn.cursor()
     cursor.execute(
         "SELECT COUNT(*) as count FROM favorites WHERE user_id = %s",
-        (user_id,)
+        (user_id,),
     )
     favorite_count = cursor.fetchone()["count"]
     conn.close()
@@ -248,6 +274,7 @@ def shop():
         username=username,
     )
 
+
 @app.route("/favorites")
 def favorites_view():
     username = authenticate()
@@ -257,11 +284,15 @@ def favorites_view():
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
+    cursor.execute(
+        "SELECT item_id FROM favorites WHERE user_id = %s", (user_id,)
+    )
     favorite_items = {str(row["item_id"]) for row in cursor.fetchall()}
     conn.close()
 
-    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     all_items = response.json()
 
     favorite_items_dict = {
@@ -278,6 +309,7 @@ def favorites_view():
         username=username,
     )
 
+
 @app.route("/get_category_items")
 def get_category_items():
     category = request.args.get("category")
@@ -291,21 +323,33 @@ def get_category_items():
 
         conn = get_user_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
-        favorite_items = {str(row["item_id"]) for row in cursor.fetchall()}
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
+        )
+        favorite_items = {
+            str(row["item_id"]) for row in cursor.fetchall()
+        }
         conn.close()
 
-        response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
         all_items = response.json()
-        items_in_category = {k: v for k, v in all_items.items() if k in favorite_items}
+        items_in_category = {
+            k: v for k, v in all_items.items() if k in favorite_items
+        }
     else:
         db_category = category.upper()
-        response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
         all_items = response.json()
         items_in_category = {
             k: v
             for k, v in all_items.items()
-            if v.get("category", "").replace(" ", "") == db_category.replace(" ", "")
+            if v.get("category", "").replace(" ", "")
+            == db_category.replace(" ", "")
         }
 
     user_id = session.get("user_id")
@@ -313,15 +357,21 @@ def get_category_items():
     if user_id:
         conn = get_user_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
+        )
         favorite_items = cursor.fetchall()
         conn.close()
-        favorite_item_ids = {str(row["item_id"]) for row in favorite_items}
+        favorite_item_ids = {
+            str(row["item_id"]) for row in favorite_items
+        }
 
     for item_id_str, item in items_in_category.items():
         item["is_favorite"] = item_id_str in favorite_item_ids
 
     return jsonify({"items": items_in_category})
+
 
 @app.route("/shopper_timeline")
 def shopper_timeline():
@@ -344,7 +394,9 @@ def shopper_timeline():
     deliverer_phone = None
     deliverer_avg_rating = None
     if order and order["claimed_by"]:
-        deliverer_avg_rating = get_average_rating(order["claimed_by"], 'deliverer')
+        deliverer_avg_rating = get_average_rating(
+            order["claimed_by"], "deliverer"
+        )
 
     if order and order["claimed_by"]:
         user_conn = get_user_db_connection()
@@ -365,11 +417,15 @@ def shopper_timeline():
         return "No orders found."
 
     order_dict = dict(order)
-    order_dict["timeline"] = json.loads(order_dict.get("timeline", "{}"))
+    order_dict["timeline"] = json.loads(
+        order_dict.get("timeline", "{}")
+    )
     order_dict["cart"] = json.loads(order_dict.get("cart", "{}"))
 
     if "timestamp" in order_dict and order_dict["timestamp"]:
-        order_dict["timestamp"] = convert_to_est(order_dict["timestamp"])
+        order_dict["timestamp"] = convert_to_est(
+            order_dict["timestamp"]
+        )
 
     return render_template(
         "shopper_timeline.html",
@@ -378,6 +434,7 @@ def shopper_timeline():
         deliverer_phone=deliverer_phone,
         username=username,
     )
+
 
 @app.route("/category_view/<category>")
 def category_view(category):
@@ -388,11 +445,15 @@ def category_view(category):
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
+    cursor.execute(
+        "SELECT item_id FROM favorites WHERE user_id = %s", (user_id,)
+    )
     favorites = {str(row["item_id"]) for row in cursor.fetchall()}
     conn.close()
 
-    response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     sample_items = response.json()
 
     items_in_category = {
@@ -409,13 +470,16 @@ def category_view(category):
         username=username,
     )
 
+
 @app.route("/cart_view")
 def cart_view():
     username = authenticate()
     if "user_id" not in session:
         return redirect(url_for("home"))
 
-    items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
         json={"user_id": session["user_id"]},
@@ -426,7 +490,8 @@ def cart_view():
     cart = cart_response.json()
 
     subtotal = sum(
-        details.get("quantity", 0) * sample_items.get(item_id, {}).get("price", 0)
+        details.get("quantity", 0)
+        * sample_items.get(item_id, {}).get("price", 0)
         for item_id, details in cart.items()
         if isinstance(details, dict)
     )
@@ -443,6 +508,7 @@ def cart_view():
         username=username,
     )
 
+
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
     response = requests.post(
@@ -456,6 +522,7 @@ def add_to_cart(item_id):
     )
 
     return jsonify(response.json())
+
 
 @app.route("/delete_item/<item_id>", methods=["POST"])
 def delete_item(item_id):
@@ -471,7 +538,12 @@ def delete_item(item_id):
     )
 
     if response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to delete item"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to delete item"}
+            ),
+            500,
+        )
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
@@ -480,11 +552,14 @@ def delete_item(item_id):
     )
     cart = cart_response.json()
 
-    items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     items = items_response.json()
 
     subtotal = sum(
-        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        details.get("quantity", 0)
+        * items.get(item_id, {}).get("price", 0)
         for item_id, details in cart.items()
         if isinstance(details, dict)
     )
@@ -500,6 +575,7 @@ def delete_item(item_id):
             "total": f"{total:.2f}",
         }
     )
+
 
 @app.route("/update_cart/<item_id>/<action>", methods=["POST"])
 def update_cart(item_id, action):
@@ -546,20 +622,37 @@ def update_cart(item_id, action):
                 timeout=REQUEST_TIMEOUT,
             )
         else:
-            return jsonify({"success": False, "error": "Item not in cart"}), 400
+            return (
+                jsonify(
+                    {"success": False, "error": "Item not in cart"}
+                ),
+                400,
+            )
     else:
-        return jsonify({"success": False, "error": "Invalid action"}), 400
+        return (
+            jsonify({"success": False, "error": "Invalid action"}),
+            400,
+        )
 
     if response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to update cart"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to update cart"}
+            ),
+            500,
+        )
 
     return jsonify({"success": True})
+
 
 @app.route("/get_cart_data")
 def get_cart_data():
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
@@ -568,14 +661,22 @@ def get_cart_data():
     )
 
     if cart_response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to fetch cart data"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to fetch cart data"}
+            ),
+            500,
+        )
 
-    items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     items = items_response.json()
 
     cart = cart_response.json()
     subtotal = sum(
-        details.get("quantity", 0) * items.get(item_id, {}).get("price", 0)
+        details.get("quantity", 0)
+        * items.get(item_id, {}).get("price", 0)
         for item_id, details in cart.items()
         if isinstance(details, dict)
     )
@@ -593,11 +694,14 @@ def get_cart_data():
         }
     )
 
+
 @app.route("/order_status/<int:order_id>")
 def order_status(order_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT timeline FROM orders WHERE id = %s", (order_id,))
+    cursor.execute(
+        "SELECT timeline FROM orders WHERE id = %s", (order_id,)
+    )
     order = cursor.fetchone()
     conn.close()
 
@@ -606,6 +710,7 @@ def order_status(order_id):
 
     timeline = json.loads(order["timeline"])
     return jsonify({"timeline": timeline})
+
 
 @app.route("/order_confirmation")
 def order_confirmation():
@@ -622,9 +727,11 @@ def order_confirmation():
         username=username,
     )
 
+
 @app.route("/logout_confirmation")
 def logout_confirmation():
     return render_template("logout_confirmation.html")
+
 
 @app.route("/place_order", methods=["POST"])
 def place_order():
@@ -637,14 +744,18 @@ def place_order():
 
     user_conn = get_user_db_connection()
     user_cursor = user_conn.cursor()
-    user_cursor.execute("SELECT cart FROM users WHERE user_id = %s", (user_id,))
+    user_cursor.execute(
+        "SELECT cart FROM users WHERE user_id = %s", (user_id,)
+    )
     user = user_cursor.fetchone()
     cart = json.loads(user["cart"]) if user and user["cart"] else {}
 
     if not cart:
         return jsonify({"error": "Cart is empty"}), 400
 
-    items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
     items = items_response.json()
 
     for item_id in cart:
@@ -670,17 +781,27 @@ def place_order():
         """INSERT INTO orders
         (status, user_id, total_items, cart, location, timeline)
         VALUES (%s, %s, %s, %s, %s, %s)""",
-        ("PLACED", user_id, total_items, json.dumps(cart), delivery_location, json.dumps(timeline)),
+        (
+            "PLACED",
+            user_id,
+            total_items,
+            json.dumps(cart),
+            delivery_location,
+            json.dumps(timeline),
+        ),
     )
 
     conn.commit()
     conn.close()
 
-    user_cursor.execute("UPDATE users SET cart = '{}' WHERE user_id = %s", (user_id,))
+    user_cursor.execute(
+        "UPDATE users SET cart = '{}' WHERE user_id = %s", (user_id,)
+    )
     user_conn.commit()
     user_conn.close()
 
     return jsonify({"success": True}), 200
+
 
 @app.route("/deliver")
 def deliver():
@@ -702,13 +823,20 @@ def deliver():
     )
     my_deliveries = cursor.fetchall()
 
-    available_deliveries = [dict(delivery) for delivery in available_deliveries]
+    available_deliveries = [
+        dict(delivery) for delivery in available_deliveries
+    ]
     my_deliveries = [dict(delivery) for delivery in my_deliveries]
 
     for delivery in available_deliveries + my_deliveries:
         cart = json.loads(delivery["cart"])
-        subtotal = sum(item["quantity"] * item.get("price", 0) for item in cart.values())
-        delivery["earnings"] = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+        subtotal = sum(
+            item["quantity"] * item.get("price", 0)
+            for item in cart.values()
+        )
+        delivery["earnings"] = round(
+            subtotal * DELIVERY_FEE_PERCENTAGE, 2
+        )
 
     conn.close()
 
@@ -718,6 +846,7 @@ def deliver():
         my_deliveries=my_deliveries,
         username=current_username,
     )
+
 
 @app.route("/delivery/<delivery_id>")
 def delivery_details(delivery_id):
@@ -734,6 +863,7 @@ def delivery_details(delivery_id):
         )
     return "Delivery not found", 404
 
+
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
     user_id = session.get("user_id")
@@ -741,9 +871,16 @@ def accept_delivery(delivery_id):
         return redirect(url_for("auth.login"))
 
     update_order_claim_status(user_id, delivery_id)
-    return redirect(url_for("deliverer_timeline", delivery_id=delivery_id))
+    return redirect(
+        url_for("deliverer_timeline", delivery_id=delivery_id)
+    )
 
-@app.route("/decline_delivery/<delivery_id>", methods=["POST"], endpoint="decline_delivery")
+
+@app.route(
+    "/decline_delivery/<delivery_id>",
+    methods=["POST"],
+    endpoint="decline_delivery",
+)
 def decline_delivery_route(delivery_id):
     response = requests.post(
         f"{SERVER_URL}/decline_delivery/{delivery_id}",
@@ -752,6 +889,7 @@ def decline_delivery_route(delivery_id):
     if response.status_code == 200:
         return redirect(url_for("deliver"))
     return "Error declining delivery", response.status_code
+
 
 @app.route("/update_checklist", methods=["POST"])
 def update_checklist():
@@ -762,20 +900,32 @@ def update_checklist():
 
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     conn = get_main_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT timeline, claimed_by FROM orders WHERE id = %s", (order_id,))
+    cursor.execute(
+        "SELECT timeline, claimed_by FROM orders WHERE id = %s",
+        (order_id,),
+    )
     order = cursor.fetchone()
 
     if not order:
         conn.close()
-        return jsonify({"success": False, "error": "Order not found"}), 404
+        return (
+            jsonify({"success": False, "error": "Order not found"}),
+            404,
+        )
 
     if order["claimed_by"] != user_id:
         conn.close()
-        return jsonify({"success": False, "error": "Not authorized"}), 403
+        return (
+            jsonify({"success": False, "error": "Not authorized"}),
+            403,
+        )
 
     timeline = json.loads(order["timeline"])
     steps = [
@@ -793,11 +943,30 @@ def update_checklist():
             previous_step = steps[step_index - 1]
             if not timeline.get(previous_step, False):
                 conn.close()
-                return jsonify({"success": False, "error": "Previous step must be completed first."}), 400
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Previous step must be completed first.",
+                        }
+                    ),
+                    400,
+                )
     else:
-        if any(timeline.get(steps[i], False) for i in range(step_index + 1, len(steps))):
+        if any(
+            timeline.get(steps[i], False)
+            for i in range(step_index + 1, len(steps))
+        ):
             conn.close()
-            return jsonify({"success": False, "error": "Cannot uncheck step with completed next steps."}), 400
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "Cannot uncheck step with completed next steps.",
+                    }
+                ),
+                400,
+            )
 
     timeline[step] = checked
     cursor.execute(
@@ -809,13 +978,19 @@ def update_checklist():
 
     return jsonify({"success": True, "timeline": timeline}), 200
 
+
 @app.route("/add_favorite/<item_id>", methods=["POST"])
 def add_favorite(item_id):
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
-    logging.info("Adding favorite: user_id=%s, item_id=%s", user_id, item_id)
+    logging.info(
+        "Adding favorite: user_id=%s, item_id=%s", user_id, item_id
+    )
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -830,17 +1005,26 @@ def add_favorite(item_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error("Error adding favorite: %s", str(e))
-        return jsonify({"success": False, "error": "Internal error."}), 500
+        return (
+            jsonify({"success": False, "error": "Internal error."}),
+            500,
+        )
     finally:
         conn.close()
+
 
 @app.route("/remove_favorite/<item_id>", methods=["POST"])
 def remove_favorite(item_id):
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
-    logging.info("Removing favorite: user_id=%s, item_id=%s", user_id, item_id)
+    logging.info(
+        "Removing favorite: user_id=%s, item_id=%s", user_id, item_id
+    )
 
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -853,9 +1037,13 @@ def remove_favorite(item_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         logging.error("Error removing favorite: %s", str(e))
-        return jsonify({"success": False, "error": "Internal error."}), 500
+        return (
+            jsonify({"success": False, "error": "Internal error."}),
+            500,
+        )
     finally:
         conn.close()
+
 
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
@@ -877,7 +1065,10 @@ def profile():
     user = user_cursor.fetchone()
 
     if not user["phone_number"] or not user["venmo_handle"]:
-        flash("You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.", "warning")
+        flash(
+            "You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.",
+            "warning",
+        )
 
     if request.method == "POST":
         venmo_handle = request.form.get("venmo_handle")
@@ -890,7 +1081,7 @@ def profile():
         )
         user_conn.commit()
         user_conn.close()
-        session.pop('_flashes', None)
+        session.pop("_flashes", None)
         flash("Profile updated successfully!")
         return redirect(url_for("profile"))
 
@@ -900,12 +1091,16 @@ def profile():
     )
     user = user_cursor.fetchone()
 
-    user_cursor.execute("SELECT item_id FROM favorites WHERE user_id = %s", (user_id,))
-    favorite_item_ids = [row["item_id"] for row in user_cursor.fetchall()]
+    user_cursor.execute(
+        "SELECT item_id FROM favorites WHERE user_id = %s", (user_id,)
+    )
+    favorite_item_ids = [
+        row["item_id"] for row in user_cursor.fetchall()
+    ]
 
     favorite_items = []
     if favorite_item_ids:
-        placeholder = ",".join(["%s"]*len(favorite_item_ids))
+        placeholder = ",".join(["%s"] * len(favorite_item_ids))
         query = f"SELECT store_code as id, name, price, category FROM items WHERE store_code IN ({placeholder})"
         main_cursor.execute(query, favorite_item_ids)
         favorite_items = main_cursor.fetchall()
@@ -928,8 +1123,8 @@ def profile():
         order_data["total"] = round(subtotal, 2)
         orders_with_totals.append(order_data)
 
-    deliverer_avg_rating = get_average_rating(user_id, 'deliverer')
-    shopper_avg_rating = get_average_rating(user_id, 'shopper')
+    deliverer_avg_rating = get_average_rating(user_id, "deliverer")
+    shopper_avg_rating = get_average_rating(user_id, "shopper")
 
     # Compute delivery stats for the user as a deliverer
     delivery_stats = get_delivery_stats(user_id)
@@ -945,14 +1140,18 @@ def profile():
         favorites=favorite_items,
         deliverer_avg_rating=deliverer_avg_rating,
         shopper_avg_rating=shopper_avg_rating,
-        delivery_stats=delivery_stats  # now includes money_made
+        delivery_stats=delivery_stats,  # now includes money_made
     )
+
 
 @app.route("/get_cart_count", methods=["GET"])
 def get_cart_count():
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     response = requests.get(
         f"{SERVER_URL}/cart",
@@ -961,23 +1160,36 @@ def get_cart_count():
     )
 
     if response.status_code != 200:
-        return jsonify({"success": False, "error": "Failed to fetch cart data"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to fetch cart data"}
+            ),
+            500,
+        )
 
     items_in_cart = len(response.json())
     return jsonify({"success": True, "cart_count": items_in_cart})
+
 
 @app.route("/get_cart_status", methods=["GET"])
 def get_cart_status():
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "User not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
 
     user = get_user_cart(user_id)
     if user is None:
-        return jsonify({"success": False, "error": "User not found"}), 404
+        return (
+            jsonify({"success": False, "error": "User not found"}),
+            404,
+        )
 
     cart = json.loads(user["cart"]) if user["cart"] else {}
     return jsonify({"success": True, "cart": cart})
+
 
 @app.route("/deliverer_timeline/<int:delivery_id>")
 def deliverer_timeline(delivery_id):
@@ -996,7 +1208,7 @@ def deliverer_timeline(delivery_id):
         return "Order not found.", 404
 
     order = dict(order_row)
-    shopper_avg_rating = get_average_rating(order["user_id"], 'shopper')
+    shopper_avg_rating = get_average_rating(order["user_id"], "shopper")
 
     user_conn = get_user_db_connection()
     user_cursor = user_conn.cursor()
@@ -1027,6 +1239,7 @@ def deliverer_timeline(delivery_id):
         shopper_avg_rating=shopper_avg_rating,
         username=current_username,
     )
+
 
 @app.route("/order_details/<int:order_id>")
 def order_details(order_id):
@@ -1063,11 +1276,15 @@ def order_details(order_id):
         username=current_username,
     )
 
+
 @app.route("/submit_rating", methods=["POST"])
 def submit_rating():
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"success": False, "error": "Not logged in"}), 401
+        return (
+            jsonify({"success": False, "error": "Not logged in"}),
+            401,
+        )
 
     data = request.get_json()
     rated_user_id = data.get("rated_user_id")
@@ -1075,11 +1292,17 @@ def submit_rating():
     rating = data.get("rating")
 
     if not rated_user_id or not rater_role or not rating:
-        return jsonify({"success": False, "error": "Missing fields"}), 400
+        return (
+            jsonify({"success": False, "error": "Missing fields"}),
+            400,
+        )
 
     order_id = data.get("order_id")
     if not order_id:
-        return jsonify({"success": False, "error": "Order ID required"}), 400
+        return (
+            jsonify({"success": False, "error": "Order ID required"}),
+            400,
+        )
 
     conn = get_main_db_connection()
     cursor = conn.cursor()
@@ -1088,25 +1311,51 @@ def submit_rating():
     conn.close()
 
     if not order:
-        return jsonify({"success": False, "error": "Order not found"}), 404
+        return (
+            jsonify({"success": False, "error": "Order not found"}),
+            404,
+        )
 
     timeline = json.loads(order["timeline"])
     if not timeline.get("Delivered"):
-        return jsonify({"success": False, "error": "Cannot rate before order is delivered"}), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Cannot rate before order is delivered",
+                }
+            ),
+            400,
+        )
 
-    if rater_role == 'deliverer':
+    if rater_role == "deliverer":
         if order["claimed_by"] != user_id:
-            return jsonify({"success": False, "error": "Not authorized"}), 403
-    elif rater_role == 'shopper':
+            return (
+                jsonify({"success": False, "error": "Not authorized"}),
+                403,
+            )
+    elif rater_role == "shopper":
         if order["user_id"] != user_id:
-            return jsonify({"success": False, "error": "Not authorized"}), 403
+            return (
+                jsonify({"success": False, "error": "Not authorized"}),
+                403,
+            )
     else:
         return jsonify({"success": False, "error": "Invalid role"}), 400
 
     if update_rating(rated_user_id, rater_role, int(rating)):
-        return jsonify({"success": True, "redirect_url": url_for("home")}), 200
+        return (
+            jsonify({"success": True, "redirect_url": url_for("home")}),
+            200,
+        )
     else:
-        return jsonify({"success": False, "error": "Rating update failed"}), 500
+        return (
+            jsonify(
+                {"success": False, "error": "Rating update failed"}
+            ),
+            500,
+        )
+
 
 if __name__ == "__main__":
     init_user_db()

@@ -15,6 +15,7 @@ from database import get_user_db_connection
 auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
 
+
 def strip_ticket(url):
     if url is None:
         return "something is badly wrong"
@@ -22,11 +23,13 @@ def strip_ticket(url):
     url = re.sub(r"\?&?$|&$", "", url)
     return url
 
+
 def create_ssl_context():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     return context
+
 
 def validate(ticket):
     val_url = (
@@ -52,13 +55,16 @@ def validate(ticket):
         return None
     return second_line
 
+
 def authenticate():
     if "username" in flask.session:
         return flask.session.get("username")
 
     ticket = flask.request.args.get("ticket")
     if ticket is None:
-        login_url = _CAS_URL + "login?service=" + parse.quote(flask.request.url)
+        login_url = (
+            _CAS_URL + "login?service=" + parse.quote(flask.request.url)
+        )
         abort(redirect(login_url))
 
     username = validate(ticket)
@@ -76,14 +82,16 @@ def authenticate():
     conn = get_user_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT user_id FROM users WHERE name = %s", (username,))
+    cursor.execute(
+        "SELECT user_id FROM users WHERE name = %s", (username,)
+    )
     user = cursor.fetchone()
 
     if user is None:
         # Insert user if not exists
         cursor.execute(
             "INSERT INTO users (user_id, name) VALUES (%s, %s) ON CONFLICT (user_id) DO NOTHING",
-            (username, username)
+            (username, username),
         )
         conn.commit()
 
@@ -93,10 +101,12 @@ def authenticate():
     flask.session["user_id"] = user_id
     return username
 
+
 @auth_bp.route("/logoutapp", methods=["GET"])
 def logoutapp():
     session.clear()
     return render_template("loggedout.html")
+
 
 @auth_bp.route("/logoutcas", methods=["GET"])
 def logoutcas():

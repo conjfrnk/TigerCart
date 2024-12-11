@@ -10,6 +10,7 @@ import csv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+
 def load_secrets(filename="secrets.txt"):
     secrets = {}
     if not os.path.exists(filename):
@@ -17,10 +18,11 @@ def load_secrets(filename="secrets.txt"):
     with open(filename, "r") as f:
         for line in f:
             line = line.strip()
-            if line and '=' in line:
-                key, val = line.split('=', 1)
+            if line and "=" in line:
+                key, val = line.split("=", 1)
                 secrets[key.strip()] = val.strip()
     return secrets
+
 
 secrets = load_secrets()
 DB_USER = secrets.get("DB_USER", "app_user")
@@ -29,17 +31,22 @@ DB_HOST = secrets.get("DB_HOST", "localhost")
 DB_PORT = secrets.get("DB_PORT", "5432")
 DB_NAME = secrets.get("DB_NAME", "app_db")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = (
+    f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
 
 def get_main_db_connection():
     """Establishes and returns a connection to the main database."""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
+
 def get_user_db_connection():
     """For this app, main and user database are the same Postgres DB."""
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
+
 
 def init_user_db():
     """
@@ -66,6 +73,7 @@ def init_user_db():
     )
     conn.commit()
     conn.close()
+
 
 def init_main_db():
     """
@@ -108,6 +116,7 @@ def init_main_db():
     conn.commit()
     conn.close()
 
+
 def create_favorites_table():
     """
     Now that both 'users' and 'items' are created, we can safely create 'favorites'.
@@ -127,6 +136,7 @@ def create_favorites_table():
     )
     conn.commit()
     conn.close()
+
 
 def populate_items_from_csv(filename="items.csv"):
     """Populates the items table with data from CSV file."""
@@ -177,6 +187,7 @@ def populate_items_from_csv(filename="items.csv"):
 
     conn.commit()
     conn.close()
+
 
 if __name__ == "__main__":
     # 1. Create users (no favorites yet)

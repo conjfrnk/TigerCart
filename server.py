@@ -14,6 +14,7 @@ from db_utils import update_order_claim_status, get_user_cart
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
+
 @app.route("/items", methods=["GET"])
 def get_items():
     conn = get_main_db_connection()
@@ -24,6 +25,7 @@ def get_items():
 
     items_dict = {item["store_code"]: dict(item) for item in items}
     return jsonify(items_dict)
+
 
 @app.route("/cart", methods=["GET", "POST"])
 def manage_cart():
@@ -43,16 +45,23 @@ def manage_cart():
         # Check item
         item_conn = get_main_db_connection()
         item_cursor = item_conn.cursor()
-        item_cursor.execute("SELECT 1 FROM items WHERE store_code = %s", (item_id,))
+        item_cursor.execute(
+            "SELECT 1 FROM items WHERE store_code = %s", (item_id,)
+        )
         item_exists = item_cursor.fetchone()
         item_conn.close()
 
         if not item_exists:
-            return jsonify({"error": "Item not found in inventory"}), 404
+            return (
+                jsonify({"error": "Item not found in inventory"}),
+                404,
+            )
 
         # Modify cart
         if action == "add":
-            cart[item_id] = {"quantity": cart.get(item_id, {}).get("quantity", 0) + 1}
+            cart[item_id] = {
+                "quantity": cart.get(item_id, {}).get("quantity", 0) + 1
+            }
         elif action == "delete":
             cart.pop(item_id, None)
         elif action == "update":
@@ -73,17 +82,22 @@ def manage_cart():
 
     return jsonify(cart)
 
+
 def fetch_user_name(user_id, cursor_users):
-    cursor_users.execute("SELECT name FROM users WHERE user_id = %s", (user_id,))
+    cursor_users.execute(
+        "SELECT name FROM users WHERE user_id = %s", (user_id,)
+    )
     user = cursor_users.fetchone()
     return user["name"] if user else "Unknown User"
+
 
 def fetch_detailed_cart(cart, cursor_orders):
     detailed_cart = {}
     subtotal = 0
     for item_id, item_info in cart.items():
         cursor_orders.execute(
-            "SELECT name, price FROM items WHERE store_code = %s", (item_id,)
+            "SELECT name, price FROM items WHERE store_code = %s",
+            (item_id,),
         )
         item_data = cursor_orders.fetchone()
         if item_data:
@@ -100,6 +114,7 @@ def fetch_detailed_cart(cart, cursor_orders):
             }
 
     return detailed_cart, subtotal
+
 
 @app.route("/deliveries", methods=["GET"])
 def get_deliveries():
@@ -124,7 +139,9 @@ def get_deliveries():
     for order in orders:
         user_name = fetch_user_name(order["user_id"], cursor_users)
         cart = json.loads(order["cart"])
-        detailed_cart, subtotal = fetch_detailed_cart(cart, cursor_orders)
+        detailed_cart, subtotal = fetch_detailed_cart(
+            cart, cursor_orders
+        )
         earnings = round(subtotal * 0.1, 2)
 
         deliveries[str(order["id"])] = {
@@ -142,6 +159,7 @@ def get_deliveries():
     conn_orders.close()
     conn_users.close()
     return jsonify(deliveries)
+
 
 @app.route("/delivery/<delivery_id>", methods=["GET"])
 def get_delivery(delivery_id):
@@ -174,11 +192,13 @@ def get_delivery(delivery_id):
     conn.close()
     return jsonify({"error": "Delivery not found"}), 404
 
+
 @app.route("/accept_delivery/<delivery_id>", methods=["POST"])
 def accept_delivery_route(delivery_id):
     user_id = request.json.get("user_id")
     update_order_claim_status(user_id, delivery_id)
     return jsonify({"success": True}), 200
+
 
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
 def decline_delivery(delivery_id):
@@ -192,12 +212,15 @@ def decline_delivery(delivery_id):
     conn.close()
     return jsonify({"success": True}), 200
 
+
 @app.route("/get_shopper_timeline", methods=["GET"])
 def get_shopper_timeline():
     order_id = request.args.get("order_id")
     conn = get_main_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT timeline FROM orders WHERE id = %s", (order_id,))
+    cursor.execute(
+        "SELECT timeline FROM orders WHERE id = %s", (order_id,)
+    )
     timeline_status = cursor.fetchone()
     conn.close()
 
@@ -205,6 +228,7 @@ def get_shopper_timeline():
         return jsonify(timeline=timeline_status["timeline"]), 200
 
     return jsonify({"error": "Order not found"}), 404
+
 
 if __name__ == "__main__":
     app.run(port=5150, debug=get_debug_mode())

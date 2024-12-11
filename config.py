@@ -10,5 +10,10 @@ import secrets
 
 SECRET_KEY = secrets.token_hex(32)
 
+
 def get_debug_mode():
-    return os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
+    return os.getenv("FLASK_DEBUG", "False").lower() in (
+        "true",
+        "1",
+        "t",
+    )
