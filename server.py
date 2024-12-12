@@ -17,6 +17,11 @@ app.secret_key = SECRET_KEY
 
 @app.route("/items", methods=["GET"])
 def get_items():
+    """
+    Fetch all items from the database and return them as a JSON response.
+
+    :return: JSON with a dictionary of items keyed by their store_code.
+    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM items")
@@ -29,6 +34,20 @@ def get_items():
 
 @app.route("/cart", methods=["GET", "POST"])
 def manage_cart():
+    """
+    Manage the user's cart. GET returns the current cart. POST modifies the cart
+    (add/update/delete items).
+
+    Expected JSON payload for POST:
+    {
+        "user_id": "<user_id>",
+        "item_id": "<item_id>",
+        "action": "add" | "update" | "delete",
+        "quantity": <int> (only required for update action)
+    }
+
+    :return: JSON representation of the user's updated cart.
+    """
     data = request.json
     user_id = data.get("user_id")
 
@@ -42,20 +61,15 @@ def manage_cart():
         item_id = str(data.get("item_id"))
         action = data.get("action")
 
-        # Check item
+        # Check if item exists
         item_conn = get_main_db_connection()
         item_cursor = item_conn.cursor()
-        item_cursor.execute(
-            "SELECT 1 FROM items WHERE store_code = %s", (item_id,)
-        )
+        item_cursor.execute("SELECT 1 FROM items WHERE store_code = %s", (item_id,))
         item_exists = item_cursor.fetchone()
         item_conn.close()
 
         if not item_exists:
-            return (
-                jsonify({"error": "Item not found in inventory"}),
-                404,
-            )
+            return jsonify({"error": "Item not found in inventory"}), 404
 
         # Modify cart
         if action == "add":
@@ -84,14 +98,27 @@ def manage_cart():
 
 
 def fetch_user_name(user_id, cursor_users):
-    cursor_users.execute(
-        "SELECT name FROM users WHERE user_id = %s", (user_id,)
-    )
+    """
+    Given a user_id and a database cursor for the users table, fetch the user's name.
+
+    :param user_id: The ID of the user to look up.
+    :param cursor_users: A cursor object for the users table.
+    :return: The user's name or "Unknown User" if not found.
+    """
+    cursor_users.execute("SELECT name FROM users WHERE user_id = %s", (user_id,))
     user = cursor_users.fetchone()
     return user["name"] if user else "Unknown User"
 
 
 def fetch_detailed_cart(cart, cursor_orders):
+    """
+    Given a cart dictionary and a database cursor for orders/items, return a detailed
+    cart with item names, prices, and totals, as well as the subtotal.
+
+    :param cart: A dictionary of item_id: {quantity: int} pairs.
+    :param cursor_orders: A cursor for fetching item details.
+    :return: (detailed_cart, subtotal) tuple.
+    """
     detailed_cart = {}
     subtotal = 0
     for item_id, item_info in cart.items():
@@ -105,7 +132,6 @@ def fetch_detailed_cart(cart, cursor_orders):
             quantity = item_info["quantity"]
             item_total = quantity * item_price
             subtotal += item_total
-
             detailed_cart[item_id] = {
                 "name": item_data["name"],
                 "price": item_price,
@@ -118,6 +144,16 @@ def fetch_detailed_cart(cart, cursor_orders):
 
 @app.route("/deliveries", methods=["GET"])
 def get_deliveries():
+    """
+    Get a list of deliveries available or currently claimed by a given deliverer.
+
+    Expected JSON payload:
+    {
+        "user_id": "<deliverer_id>"
+    }
+
+    :return: JSON with a dictionary of deliveries keyed by their order ID.
+    """
     deliverer_id = request.json.get("user_id")
     conn_orders = get_main_db_connection()
     cursor_orders = conn_orders.cursor()
@@ -139,9 +175,7 @@ def get_deliveries():
     for order in orders:
         user_name = fetch_user_name(order["user_id"], cursor_users)
         cart = json.loads(order["cart"])
-        detailed_cart, subtotal = fetch_detailed_cart(
-            cart, cursor_orders
-        )
+        detailed_cart, subtotal = fetch_detailed_cart(cart, cursor_orders)
         earnings = round(subtotal * 0.1, 2)
 
         deliveries[str(order["id"])] = {
@@ -163,10 +197,17 @@ def get_deliveries():
 
 @app.route("/delivery/<delivery_id>", methods=["GET"])
 def get_delivery(delivery_id):
+    """
+    Get details for a single delivery (order) by its ID.
+
+    :param delivery_id: The ID of the delivery to fetch.
+    :return: JSON of the delivery details or an error message if not found.
+    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, timestamp, user_id, total_items, cart, location FROM orders WHERE id = %s",
+        "SELECT id, timestamp, user_id, total_items, cart, location "
+        "FROM orders WHERE id = %s",
         (delivery_id,),
     )
     order = cursor.fetchone()
@@ -195,6 +236,17 @@ def get_delivery(delivery_id):
 
 @app.route("/accept_delivery/<delivery_id>", methods=["POST"])
 def accept_delivery_route(delivery_id):
+    """
+    Accept a delivery for a given user (claim it).
+
+    Expected JSON payload:
+    {
+        "user_id": "<deliverer_id>"
+    }
+
+    :param delivery_id: The ID of the delivery to accept.
+    :return: JSON success message if successful.
+    """
     user_id = request.json.get("user_id")
     update_order_claim_status(user_id, delivery_id)
     return jsonify({"success": True}), 200
@@ -202,6 +254,12 @@ def accept_delivery_route(delivery_id):
 
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
 def decline_delivery(delivery_id):
+    """
+    Decline a previously available delivery.
+
+    :param delivery_id: The ID of the delivery to decline.
+    :return: JSON success message if successful.
+    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -215,6 +273,12 @@ def decline_delivery(delivery_id):
 
 @app.route("/get_shopper_timeline", methods=["GET"])
 def get_shopper_timeline():
+    """
+    Get the timeline for a given shopper's order based on order_id query parameter.
+
+    :queryparam order_id: The ID of the order for which the timeline is requested.
+    :return: JSON with the timeline of the order or an error if not found.
+    """
     order_id = request.args.get("order_id")
     conn = get_main_db_connection()
     cursor = conn.cursor()

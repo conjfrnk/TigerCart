@@ -6,7 +6,6 @@ Clears the database and regenerates it by running initialization code from datab
 
 from database import (
     get_main_db_connection,
-    get_user_db_connection,
     init_user_db,
     init_main_db,
     create_favorites_table,
@@ -17,19 +16,15 @@ from database import (
 def drop_all_tables():
     """
     Drops all known tables from the database to start fresh.
+    It drops tables in the correct order to avoid foreign key constraint errors.
     """
-    # We'll connect to the main DB since both main and user share the same one in this setup
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
     # Drop tables that we know exist (in reverse order of dependencies)
-    # favorites depends on users and items
     cursor.execute("DROP TABLE IF EXISTS favorites")
-    # orders depends on users
     cursor.execute("DROP TABLE IF EXISTS orders")
-    # items is standalone
     cursor.execute("DROP TABLE IF EXISTS items")
-    # users is standalone
     cursor.execute("DROP TABLE IF EXISTS users")
 
     conn.commit()

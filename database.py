@@ -12,24 +12,33 @@ from psycopg2.extras import RealDictCursor
 
 
 def load_secrets(filename="secrets.txt"):
-    secrets = {}
+    """
+    Load database-related secrets from a file.
+
+    :param filename: The name of the secrets file.
+    :return: A dictionary of secrets read from the file.
+    :raises FileNotFoundError: If the secrets file doesn't exist.
+    """
+    loaded_secrets = {}
     if not os.path.exists(filename):
         raise FileNotFoundError(f"Secrets file '{filename}' not found.")
-    with open(filename, "r") as f:
-        for line in f:
+    # Specify encoding to avoid W1514 warning
+    with open(filename, "r", encoding="utf-8") as secret_file:
+        for line in secret_file:
             line = line.strip()
             if line and "=" in line:
                 key, val = line.split("=", 1)
-                secrets[key.strip()] = val.strip()
-    return secrets
+                loaded_secrets[key.strip()] = val.strip()
+    return loaded_secrets
 
 
-secrets = load_secrets()
-DB_USER = secrets.get("DB_USER", "app_user")
-DB_PASS = secrets.get("DB_PASS", "password")
-DB_HOST = secrets.get("DB_HOST", "localhost")
-DB_PORT = secrets.get("DB_PORT", "5432")
-DB_NAME = secrets.get("DB_NAME", "app_db")
+# Use a different variable name to avoid redefinition warning
+app_secrets = load_secrets()
+DB_USER = app_secrets.get("DB_USER", "app_user")
+DB_PASS = app_secrets.get("DB_PASS", "password")
+DB_HOST = app_secrets.get("DB_HOST", "localhost")
+DB_PORT = app_secrets.get("DB_PORT", "5432")
+DB_NAME = app_secrets.get("DB_NAME", "app_db")
 
 DATABASE_URL = (
     f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -37,25 +46,33 @@ DATABASE_URL = (
 
 
 def get_main_db_connection():
-    """Establishes and returns a connection to the main database."""
+    """
+    Establish and return a connection to the main database.
+
+    :return: A psycopg2 connection object with RealDictCursor.
+    """
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 
 def get_user_db_connection():
-    """For this app, main and user database are the same Postgres DB."""
+    """
+    For this app, main and user database are the same Postgres DB.
+    Returns a connection to the same DB.
+
+    :return: A psycopg2 connection object with RealDictCursor.
+    """
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 
 def init_user_db():
     """
-    Initializes the user database with necessary tables.
-    Only create 'users' here.
+    Initializes the user database with the necessary tables.
+    Creates 'users' table if it does not exist.
     """
     conn = get_user_db_connection()
     cursor = conn.cursor()
-    # Create 'users' first
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -77,7 +94,8 @@ def init_user_db():
 
 def init_main_db():
     """
-    Initializes the main database with necessary tables and adds migration for new columns.
+    Initializes the main database with necessary tables (items, orders)
+    and performs database migrations as needed.
     Must run after init_user_db().
     """
     conn = get_main_db_connection()
@@ -100,7 +118,8 @@ def init_main_db():
         """
         CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
-            status TEXT CHECK (status IN ('PLACED', 'CLAIMED', 'FULFILLED', 'DECLINED', 'CANCELLED')),
+            status TEXT CHECK (status IN ('PLACED', 'CLAIMED', 'FULFILLED',
+                                          'DECLINED', 'CANCELLED')),
             timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
             user_id TEXT,
             total_items INTEGER,
@@ -126,6 +145,10 @@ def init_main_db():
 
 
 def create_favorites_table():
+    """
+    Creates the favorites table if it doesn't exist.
+    This table links users and items to store their favorites.
+    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -144,7 +167,12 @@ def create_favorites_table():
 
 
 def populate_items_from_csv(filename="items.csv"):
-    """Populates the items table with data from CSV file."""
+    """
+    Populates the items table with data from a CSV file.
+    The CSV may contain categories and items.
+
+    :param filename: The CSV filename containing item data.
+    """
     conn = get_main_db_connection()
     cursor = conn.cursor()
 
@@ -157,7 +185,8 @@ def populate_items_from_csv(filename="items.csv"):
         return
 
     current_category = None
-    with open(filename, "r") as csvfile:
+    # Specify encoding to avoid W1514 warning
+    with open(filename, "r", encoding="utf-8") as csvfile:
         csvreader = csv.reader(csvfile)
         for row in csvreader:
             if not any(row):
