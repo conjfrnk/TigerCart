@@ -2,3 +2,5 @@ flask
 gunicorn
 common
 requests
+psycopg2
+flask-wtf
