@@ -2,3 +2,4 @@ flask
 gunicorn
 common
 requests
+psycopg2
