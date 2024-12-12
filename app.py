@@ -29,12 +29,14 @@ from database import (
     init_user_db,
 )
 from db_utils import update_order_claim_status, get_user_cart
+from flask_wtf.csrf import CSRFProtect
 
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.register_blueprint(auth_bp)
+csrf = CSRFProtect(app)
 
 SERVER_URL = "http://localhost:5150"
 REQUEST_TIMEOUT = 5

@@ -2,11 +2,11 @@
 """
 server.py
 Serves data for the TigerCart app.
-Now using PostgreSQL and %s placeholders.
+Now using PostgreSQL and %s placeholders and improved security checks.
 """
 
 import json
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 from config import get_debug_mode, SECRET_KEY
 from database import get_main_db_connection, get_user_db_connection
 from db_utils import update_order_claim_status, get_user_cart
@@ -29,8 +29,15 @@ def get_items():
 
 @app.route("/cart", methods=["GET", "POST"])
 def manage_cart():
-    data = request.json
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+
     user_id = data.get("user_id")
+    # Security check: ensure the session user_id matches the request user_id
+    session_user_id = session.get("user_id")
+    if not session_user_id or session_user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
 
     user = get_user_cart(user_id)
     if user is None:
@@ -42,7 +49,7 @@ def manage_cart():
         item_id = str(data.get("item_id"))
         action = data.get("action")
 
-        # Check item
+        # Check item existence
         item_conn = get_main_db_connection()
         item_cursor = item_conn.cursor()
         item_cursor.execute(
@@ -118,7 +125,16 @@ def fetch_detailed_cart(cart, cursor_orders):
 
 @app.route("/deliveries", methods=["GET"])
 def get_deliveries():
-    deliverer_id = request.json.get("user_id")
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+    deliverer_id = data.get("user_id")
+
+    # Security check
+    session_user_id = session.get("user_id")
+    if not session_user_id or session_user_id != deliverer_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
     conn_orders = get_main_db_connection()
     cursor_orders = conn_orders.cursor()
     conn_users = get_user_db_connection()
@@ -195,7 +211,16 @@ def get_delivery(delivery_id):
 
 @app.route("/accept_delivery/<delivery_id>", methods=["POST"])
 def accept_delivery_route(delivery_id):
-    user_id = request.json.get("user_id")
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+    user_id = data.get("user_id")
+
+    # Security check
+    session_user_id = session.get("user_id")
+    if not session_user_id or session_user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
     update_order_claim_status(user_id, delivery_id)
     return jsonify({"success": True}), 200
 
