@@ -55,6 +55,7 @@ def get_user_data(user_id):
     conn.close()
     return user
 
+
 def get_user_orders(user_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
@@ -65,6 +66,7 @@ def get_user_orders(user_id):
     orders = cursor.fetchall()
     conn.close()
     return orders
+
 
 def calculate_user_stats(orders):
     total_spent = 0
@@ -83,6 +85,7 @@ def calculate_user_stats(orders):
         "total_spent": round(total_spent, 2),
         "total_items": total_items,
     }
+
 
 def get_average_rating(user_id, role):
     conn = get_user_db_connection()
@@ -108,6 +111,7 @@ def get_average_rating(user_id, role):
     if row and row["c"] and row["c"] > 0:
         return round(row["s"] / row["c"], 1)
     return None
+
 
 def update_rating(user_id, rater_role, rating):
     if rating < 1 or rating > 5:
@@ -145,6 +149,7 @@ def update_rating(user_id, rater_role, rating):
     conn.close()
     return True
 
+
 def get_delivery_stats(user_id):
     """
     Calculate real delivery stats for a deliverer.
@@ -176,9 +181,11 @@ def get_delivery_stats(user_id):
         "money_made": round(money_made, 2),
     }
 
+
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 # Routes for Navigation and Rendering
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
 
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
@@ -299,69 +306,6 @@ def favorites_view():
         favorites=favorite_items,
         username=username,
     )
-
-
-@app.route("/get_category_items")
-def get_category_items():
-    category = request.args.get("category")
-    if not category:
-        return jsonify({"error": "Category not specified"}), 400
-
-    if category == "Favorites":
-        user_id = session.get("user_id")
-        if not user_id:
-            return jsonify({"error": "User not logged in"}), 401
-
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT item_id FROM favorites WHERE user_id = %s",
-            (user_id,),
-        )
-        favorite_items = {
-            str(row["item_id"]) for row in cursor.fetchall()
-        }
-        conn.close()
-
-        response = requests.get(
-            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-        )
-        all_items = response.json()
-        items_in_category = {
-            k: v for k, v in all_items.items() if k in favorite_items
-        }
-    else:
-        db_category = category.upper()
-        response = requests.get(
-            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-        )
-        all_items = response.json()
-        items_in_category = {
-            k: v
-            for k, v in all_items.items()
-            if v.get("category", "").replace(" ", "")
-            == db_category.replace(" ", "")
-        }
-
-    user_id = session.get("user_id")
-    favorite_item_ids = set()
-    if user_id:
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT item_id FROM favorites WHERE user_id = %s",
-            (user_id,),
-        )
-        favorite_items = cursor.fetchall()
-        conn.close()
-        favorite_item_ids = {
-            str(row["item_id"]) for row in favorite_items
-        }
-
-    for item_id_str, item in items_in_category.items():
-        item["is_favorite"] = item_id_str in favorite_item_ids
-
-    return jsonify({"items": items_in_category})
 
 
 @app.route("/shopper_timeline")
@@ -498,6 +442,192 @@ def cart_view():
         total=total,
         username=username,
     )
+
+
+@app.route("/deliver")
+def deliver():
+    current_username = authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("home"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'")
+    available_deliveries = cursor.fetchall()
+
+    cursor.execute(
+        """SELECT * FROM orders
+        WHERE status = 'CLAIMED' AND claimed_by = %s""",
+        (user_id,),
+    )
+    my_deliveries = cursor.fetchall()
+
+    available_deliveries = [
+        dict(delivery) for delivery in available_deliveries
+    ]
+    my_deliveries = [dict(delivery) for delivery in my_deliveries]
+
+    for delivery in available_deliveries + my_deliveries:
+        cart = json.loads(delivery["cart"])
+        subtotal = sum(
+            item["quantity"] * item.get("price", 0)
+            for item in cart.values()
+        )
+        delivery["earnings"] = round(
+            subtotal * DELIVERY_FEE_PERCENTAGE, 2
+        )
+
+    conn.close()
+
+    return render_template(
+        "deliver.html",
+        available_deliveries=available_deliveries,
+        my_deliveries=my_deliveries,
+        username=current_username,
+    )
+
+
+@app.route("/delivery/<delivery_id>")
+def delivery_details(delivery_id):
+    current_username = authenticate()
+    response = requests.get(
+        f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
+    )
+    if response.status_code == 200:
+        delivery = response.json()
+        return render_template(
+            "delivery_details.html",
+            delivery=delivery,
+            username=current_username,
+        )
+    return "Delivery not found", 404
+
+
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    username = authenticate()
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+    user_id = session["user_id"]
+
+    user_conn = get_user_db_connection()
+    main_conn = get_main_db_connection()
+
+    user_cursor = user_conn.cursor()
+    main_cursor = main_conn.cursor()
+
+    user_cursor.execute(
+        "SELECT phone_number, venmo_handle FROM users WHERE user_id = %s",
+        (user_id,),
+    )
+    user = user_cursor.fetchone()
+
+    if not user["phone_number"] or not user["venmo_handle"]:
+        flash(
+            "You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.",
+            "warning",
+        )
+
+    if request.method == "POST":
+        venmo_handle = request.form.get("venmo_handle")
+        phone_number = request.form.get("phone_number")
+        user_cursor.execute(
+            """UPDATE users
+            SET venmo_handle = %s, phone_number = %s
+            WHERE user_id = %s""",
+            (venmo_handle, phone_number, user_id),
+        )
+        user_conn.commit()
+        user_conn.close()
+        session.pop("_flashes", None)
+        flash("Profile updated successfully!")
+        return redirect(url_for("profile"))
+
+    user_cursor.execute(
+        "SELECT venmo_handle, phone_number FROM users WHERE user_id = %s",
+        (user_id,),
+    )
+    user = user_cursor.fetchone()
+
+    user_cursor.execute(
+        "SELECT item_id FROM favorites WHERE user_id = %s", (user_id,)
+    )
+    favorite_item_ids = [
+        row["item_id"] for row in user_cursor.fetchall()
+    ]
+
+    favorite_items = []
+    if favorite_item_ids:
+        placeholder = ",".join(["%s"] * len(favorite_item_ids))
+        query = f"SELECT store_code as id, name, price, category FROM items WHERE store_code IN ({placeholder})"
+        main_cursor.execute(query, favorite_item_ids)
+        favorite_items = main_cursor.fetchall()
+
+    user_conn.close()
+    main_conn.close()
+
+    user_profile = get_user_data(user_id)
+    orders = get_user_orders(user_id)
+    stats = calculate_user_stats(orders)
+
+    orders_with_totals = []
+    for order in orders:
+        cart = json.loads(order["cart"])
+        subtotal = sum(
+            details.get("quantity", 0) * details.get("price", 0)
+            for details in cart.values()
+        )
+        order_data = dict(order)
+        order_data["total"] = round(subtotal, 2)
+        orders_with_totals.append(order_data)
+
+    deliverer_avg_rating = get_average_rating(user_id, "deliverer")
+    shopper_avg_rating = get_average_rating(user_id, "shopper")
+
+    # Compute delivery stats for the user as a deliverer
+    delivery_stats = get_delivery_stats(user_id)
+
+    return render_template(
+        "profile.html",
+        username=username,
+        orders=orders_with_totals,
+        stats=stats,
+        user_profile=user_profile,
+        venmo_handle=user["venmo_handle"] if user else "",
+        phone_number=user["phone_number"] if user else "",
+        favorites=favorite_items,
+        deliverer_avg_rating=deliverer_avg_rating,
+        shopper_avg_rating=shopper_avg_rating,
+        delivery_stats=delivery_stats,  # now includes money_made
+    )
+
+
+@app.route("/order_confirmation")
+def order_confirmation():
+    username = authenticate()
+    response = requests.get(
+        f"{SERVER_URL}/cart",
+        json={"user_id": session["user_id"]},
+        timeout=REQUEST_TIMEOUT,
+    )
+    items_in_cart = len(response.json())
+    return render_template(
+        "order_confirmation.html",
+        items_in_cart=items_in_cart,
+        username=username,
+    )
+
+
+@app.route("/logout_confirmation")
+def logout_confirmation():
+    return render_template("logout_confirmation.html")
+
+
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# API Endpoints for Data Operations
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
@@ -703,26 +833,6 @@ def order_status(order_id):
     return jsonify({"timeline": timeline})
 
 
-@app.route("/order_confirmation")
-def order_confirmation():
-    username = authenticate()
-    response = requests.get(
-        f"{SERVER_URL}/cart",
-        json={"user_id": session["user_id"]},
-        timeout=REQUEST_TIMEOUT,
-    )
-    items_in_cart = len(response.json())
-    return render_template(
-        "order_confirmation.html",
-        items_in_cart=items_in_cart,
-        username=username,
-    )
-
-
-@app.route("/logout_confirmation")
-def logout_confirmation():
-    return render_template("logout_confirmation.html")
-
 
 @app.route("/place_order", methods=["POST"])
 def place_order():
@@ -794,66 +904,67 @@ def place_order():
     return jsonify({"success": True}), 200
 
 
-@app.route("/deliver")
-def deliver():
-    current_username = authenticate()
+@app.route("/get_category_items")
+def get_category_items():
+    category = request.args.get("category")
+    if not category:
+        return jsonify({"error": "Category not specified"}), 400
+
+    if category == "Favorites":
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "User not logged in"}), 401
+
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
+        )
+        favorite_items = {
+            str(row["item_id"]) for row in cursor.fetchall()
+        }
+        conn.close()
+
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
+        all_items = response.json()
+        items_in_category = {
+            k: v for k, v in all_items.items() if k in favorite_items
+        }
+    else:
+        db_category = category.upper()
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
+        all_items = response.json()
+        items_in_category = {
+            k: v
+            for k, v in all_items.items()
+            if v.get("category", "").replace(" ", "")
+            == db_category.replace(" ", "")
+        }
+
     user_id = session.get("user_id")
-    if not user_id:
-        return redirect(url_for("home"))
-
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM orders WHERE status = 'PLACED'")
-    available_deliveries = cursor.fetchall()
-
-    cursor.execute(
-        """SELECT * FROM orders
-        WHERE status = 'CLAIMED' AND claimed_by = %s""",
-        (user_id,),
-    )
-    my_deliveries = cursor.fetchall()
-
-    available_deliveries = [
-        dict(delivery) for delivery in available_deliveries
-    ]
-    my_deliveries = [dict(delivery) for delivery in my_deliveries]
-
-    for delivery in available_deliveries + my_deliveries:
-        cart = json.loads(delivery["cart"])
-        subtotal = sum(
-            item["quantity"] * item.get("price", 0)
-            for item in cart.values()
+    favorite_item_ids = set()
+    if user_id:
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
         )
-        delivery["earnings"] = round(
-            subtotal * DELIVERY_FEE_PERCENTAGE, 2
-        )
+        favorite_items = cursor.fetchall()
+        conn.close()
+        favorite_item_ids = {
+            str(row["item_id"]) for row in favorite_items
+        }
 
-    conn.close()
+    for item_id_str, item in items_in_category.items():
+        item["is_favorite"] = item_id_str in favorite_item_ids
 
-    return render_template(
-        "deliver.html",
-        available_deliveries=available_deliveries,
-        my_deliveries=my_deliveries,
-        username=current_username,
-    )
-
-
-@app.route("/delivery/<delivery_id>")
-def delivery_details(delivery_id):
-    current_username = authenticate()
-    response = requests.get(
-        f"{SERVER_URL}/delivery/{delivery_id}", timeout=REQUEST_TIMEOUT
-    )
-    if response.status_code == 200:
-        delivery = response.json()
-        return render_template(
-            "delivery_details.html",
-            delivery=delivery,
-            username=current_username,
-        )
-    return "Delivery not found", 404
-
+    return jsonify({"items": items_in_category})
 
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
@@ -1035,104 +1146,6 @@ def remove_favorite(item_id):
     finally:
         conn.close()
 
-
-@app.route("/profile", methods=["GET", "POST"])
-def profile():
-    username = authenticate()
-    if "user_id" not in session:
-        return redirect(url_for("auth.login"))
-    user_id = session["user_id"]
-
-    user_conn = get_user_db_connection()
-    main_conn = get_main_db_connection()
-
-    user_cursor = user_conn.cursor()
-    main_cursor = main_conn.cursor()
-
-    user_cursor.execute(
-        "SELECT phone_number, venmo_handle FROM users WHERE user_id = %s",
-        (user_id,),
-    )
-    user = user_cursor.fetchone()
-
-    if not user["phone_number"] or not user["venmo_handle"]:
-        flash(
-            "You have not yet submitted your phone number and Venmo handle. Please complete your profile before continuing.",
-            "warning",
-        )
-
-    if request.method == "POST":
-        venmo_handle = request.form.get("venmo_handle")
-        phone_number = request.form.get("phone_number")
-        user_cursor.execute(
-            """UPDATE users
-            SET venmo_handle = %s, phone_number = %s
-            WHERE user_id = %s""",
-            (venmo_handle, phone_number, user_id),
-        )
-        user_conn.commit()
-        user_conn.close()
-        session.pop("_flashes", None)
-        flash("Profile updated successfully!")
-        return redirect(url_for("profile"))
-
-    user_cursor.execute(
-        "SELECT venmo_handle, phone_number FROM users WHERE user_id = %s",
-        (user_id,),
-    )
-    user = user_cursor.fetchone()
-
-    user_cursor.execute(
-        "SELECT item_id FROM favorites WHERE user_id = %s", (user_id,)
-    )
-    favorite_item_ids = [
-        row["item_id"] for row in user_cursor.fetchall()
-    ]
-
-    favorite_items = []
-    if favorite_item_ids:
-        placeholder = ",".join(["%s"] * len(favorite_item_ids))
-        query = f"SELECT store_code as id, name, price, category FROM items WHERE store_code IN ({placeholder})"
-        main_cursor.execute(query, favorite_item_ids)
-        favorite_items = main_cursor.fetchall()
-
-    user_conn.close()
-    main_conn.close()
-
-    user_profile = get_user_data(user_id)
-    orders = get_user_orders(user_id)
-    stats = calculate_user_stats(orders)
-
-    orders_with_totals = []
-    for order in orders:
-        cart = json.loads(order["cart"])
-        subtotal = sum(
-            details.get("quantity", 0) * details.get("price", 0)
-            for details in cart.values()
-        )
-        order_data = dict(order)
-        order_data["total"] = round(subtotal, 2)
-        orders_with_totals.append(order_data)
-
-    deliverer_avg_rating = get_average_rating(user_id, "deliverer")
-    shopper_avg_rating = get_average_rating(user_id, "shopper")
-
-    # Compute delivery stats for the user as a deliverer
-    delivery_stats = get_delivery_stats(user_id)
-
-    return render_template(
-        "profile.html",
-        username=username,
-        orders=orders_with_totals,
-        stats=stats,
-        user_profile=user_profile,
-        venmo_handle=user["venmo_handle"] if user else "",
-        phone_number=user["phone_number"] if user else "",
-        favorites=favorite_items,
-        deliverer_avg_rating=deliverer_avg_rating,
-        shopper_avg_rating=shopper_avg_rating,
-        delivery_stats=delivery_stats,  # now includes money_made
-    )
 
 
 @app.route("/get_cart_count", methods=["GET"])
