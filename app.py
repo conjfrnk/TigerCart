@@ -790,6 +790,11 @@ def get_cart_status():
     return jsonify({"success": True, "cart": cart})
 
 
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# Shopping and Cart Management
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
     response = requests.post(
@@ -926,24 +931,6 @@ def update_cart(item_id, action):
     return jsonify({"success": True})
 
 
-@app.route("/order_status/<int:order_id>")
-def order_status(order_id):
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT timeline FROM orders WHERE id = %s", (order_id,)
-    )
-    order = cursor.fetchone()
-    conn.close()
-
-    if not order:
-        return jsonify({"error": "Order not found."}), 404
-
-    timeline = json.loads(order["timeline"])
-    return jsonify({"timeline": timeline})
-
-
-
 @app.route("/place_order", methods=["POST"])
 def place_order():
     user_id = session.get("user_id")
@@ -1012,6 +999,24 @@ def place_order():
     user_conn.close()
 
     return jsonify({"success": True}), 200
+
+
+@app.route("/order_status/<int:order_id>")
+def order_status(order_id):
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT timeline FROM orders WHERE id = %s", (order_id,)
+    )
+    order = cursor.fetchone()
+    conn.close()
+
+    if not order:
+        return jsonify({"error": "Order not found."}), 404
+
+    timeline = json.loads(order["timeline"])
+    return jsonify({"timeline": timeline})
+
 
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
