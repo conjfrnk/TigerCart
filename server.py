@@ -6,6 +6,7 @@ Now using PostgreSQL and %s placeholders and improved security checks.
 """
 
 import json
+import logging
 from flask import Flask, jsonify, request, session
 from config import get_debug_mode, SECRET_KEY
 from database import get_main_db_connection, get_user_db_connection
@@ -26,18 +27,29 @@ def get_items():
     items_dict = {item["store_code"]: dict(item) for item in items}
     return jsonify(items_dict)
 
-# Manage user cart
 @app.route("/cart", methods=["GET", "POST"])
 def manage_cart():
+    if request.method == "GET":
+        # For GET requests, get user_id from query parameters
+        user_id = request.args.get("user_id")
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        user = get_user_cart(user_id)
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+
+        cart = json.loads(user["cart"]) if user["cart"] else {}
+        return jsonify(cart)
+
+    # POST request: expect JSON with user_id, item_id, action
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid request"}), 400
 
     user_id = data.get("user_id")
-    # Security check: ensure the session user_id matches the request user_id
-    session_user_id = session.get("user_id")
-    if not session_user_id or session_user_id != user_id:
-        return jsonify({"error": "Unauthorized"}), 403
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
 
     user = get_user_cart(user_id)
     if user is None:
@@ -45,82 +57,47 @@ def manage_cart():
 
     cart = json.loads(user["cart"]) if user["cart"] else {}
 
-    if request.method == "POST":
-        item_id = str(data.get("item_id"))
-        action = data.get("action")
+    item_id = data.get("item_id")
+    action = data.get("action")
 
-        # Check item existence
-        item_conn = get_main_db_connection()
-        item_cursor = item_conn.cursor()
-        item_cursor.execute(
-            "SELECT 1 FROM items WHERE store_code = %s", (item_id,)
-        )
-        item_exists = item_cursor.fetchone()
-        item_conn.close()
+    if not item_id or not action:
+        return jsonify({"error": "item_id and action required"}), 400
 
-        if not item_exists:
-            return (
-                jsonify({"error": "Item not found in inventory"}),
-                404,
-            )
+    # Check if item exists
+    item_conn = get_main_db_connection()
+    item_cursor = item_conn.cursor()
+    item_cursor.execute("SELECT 1 FROM items WHERE store_code = %s", (item_id,))
+    item_exists = item_cursor.fetchone()
+    item_conn.close()
 
-        # Modify cart
-        if action == "add":
-            cart[item_id] = {
-                "quantity": cart.get(item_id, {}).get("quantity", 0) + 1
-            }
-        elif action == "delete":
+    if not item_exists:
+        return jsonify({"error": "Item not found in inventory"}), 404
+
+    # Modify cart
+    if action == "add":
+        cart[item_id] = {"quantity": cart.get(item_id, {}).get("quantity", 0) + 1}
+    elif action == "delete":
+        cart.pop(item_id, None)
+    elif action == "update":
+        quantity = data.get("quantity", 0)
+        if quantity > 0:
+            cart[item_id] = {"quantity": quantity}
+        else:
             cart.pop(item_id, None)
-        elif action == "update":
-            quantity = data.get("quantity", 0)
-            if quantity > 0:
-                cart[item_id] = {"quantity": quantity}
-            else:
-                cart.pop(item_id, None)
+    else:
+        return jsonify({"error": "Invalid action"}), 400
 
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE users SET cart = %s WHERE user_id = %s",
-            (json.dumps(cart), user_id),
-        )
-        conn.commit()
-        conn.close()
+    conn = get_user_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET cart = %s WHERE user_id = %s",
+        (json.dumps(cart), user_id),
+    )
+    conn.commit()
+    conn.close()
 
     return jsonify(cart)
 
-# Get user cart
-def fetch_user_name(user_id, cursor_users):
-    cursor_users.execute(
-        "SELECT name FROM users WHERE user_id = %s", (user_id,)
-    )
-    user = cursor_users.fetchone()
-    return user["name"] if user else "Unknown User"
-
-# Fetch detailed cart
-def fetch_detailed_cart(cart, cursor_orders):
-    detailed_cart = {}
-    subtotal = 0
-    for item_id, item_info in cart.items():
-        cursor_orders.execute(
-            "SELECT name, price FROM items WHERE store_code = %s",
-            (item_id,),
-        )
-        item_data = cursor_orders.fetchone()
-        if item_data:
-            item_price = item_data["price"]
-            quantity = item_info["quantity"]
-            item_total = quantity * item_price
-            subtotal += item_total
-
-            detailed_cart[item_id] = {
-                "name": item_data["name"],
-                "price": item_price,
-                "quantity": quantity,
-                "total": item_total,
-            }
-
-    return detailed_cart, subtotal
 
 # Get deliveries
 @app.route("/deliveries", methods=["GET"])

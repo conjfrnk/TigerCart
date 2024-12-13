@@ -191,25 +191,39 @@
             }
         })
         .catch(console.error);
-}
+ }
 
 
  function addToCart(itemId) {
-     fetch(`/add_to_cart/${itemId}`, {
-         method: 'POST',
-         headers: {
-             'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({ user_id: "{{ session.get('user_id') }}" })
-     })
-         .then(response => response.json())
-         .then(data => {
-             console.log(data);
-             refreshCart();
-             alert("Item added to cart!");
-         })
-         .catch(error => console.log(error));
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const userId = "{{ session.get('user_id') }}"; // Pass user_id from session
+
+    fetch(`/add_to_cart/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken, // Include CSRF token
+        },
+        body: JSON.stringify({ user_id: userId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || 'Failed to add to cart'); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert("Item added to cart!");
+        refreshCart(); // Update cart count or status
+    })
+    .catch(error => {
+        console.error("Error adding item to cart:", error);
+        alert(error.message);
+    });
  }
+
+
+
 
  function fetchCartCount() {
      fetch('/get_cart_count')

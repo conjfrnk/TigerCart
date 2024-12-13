@@ -20,6 +20,7 @@ from flask import (
     request,
     session,
     url_for,
+    current_app
 )
 from auth import auth_bp, authenticate
 from config import get_debug_mode, SECRET_KEY
@@ -420,7 +421,7 @@ def cart_view():
         items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
         cart_response = requests.get(
             f"{SERVER_URL}/cart",
-            json={"user_id": session["user_id"]},
+            params={"user_id": user_id},
             timeout=REQUEST_TIMEOUT,
         )
 
@@ -770,9 +771,10 @@ def get_cart_count():
 
     response = requests.get(
         f"{SERVER_URL}/cart",
-        json={"user_id": user_id},
+        params={"user_id": user_id},
         timeout=REQUEST_TIMEOUT,
     )
+
 
     if response.status_code != 200:
         return (
@@ -813,17 +815,52 @@ def get_cart_status():
 # Function to add an item to the cart
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
-    response = requests.post(
-        f"{SERVER_URL}/cart",
-        json={
-            "user_id": session["user_id"],
-            "item_id": item_id,
-            "action": "add",
-        },
-        timeout=REQUEST_TIMEOUT,
-    )
+    user_id = session.get("user_id")
+    csrf_token = session.get("csrf_token")
 
-    return jsonify(response.json())
+    if not user_id:
+        return jsonify({"error": "User not logged in"}), 401
+
+    # Include the CSRF token in the request headers
+    headers = {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrf_token,
+    }
+
+    # Send the POST request to the API server
+    payload = {
+        "user_id": user_id,
+        "item_id": item_id,
+        "action": "add"
+    }
+
+    try:
+        response = requests.post(
+            f"{SERVER_URL}/cart", headers=headers, json=payload, timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()  # Raise exception for 4xx/5xx responses
+
+        # Attempt to parse JSON response
+        return jsonify(response.json())
+
+    except requests.exceptions.HTTPError as http_err:
+        # Response is an error; try to parse JSON, if fails, return a default error
+        try:
+            error_data = response.json()
+        except ValueError:
+            # The response isn't JSON; just return a generic error
+            error_data = {"error": "Failed to add item"}
+
+        current_app.logger.error(f"HTTP error occurred: {http_err} - {response.text}")
+        return jsonify(error_data), response.status_code
+
+    except Exception as e:
+        current_app.logger.error(f"Error adding item to cart: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+
+
 
 # Function to delete an item from the cart
 @app.route("/delete_item/<item_id>", methods=["POST"])
@@ -849,10 +886,9 @@ def delete_item(item_id):
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
-        json={"user_id": user_id},
+        params={"user_id": user_id},
         timeout=REQUEST_TIMEOUT,
     )
-    cart = cart_response.json()
 
     items_response = requests.get(
         f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
