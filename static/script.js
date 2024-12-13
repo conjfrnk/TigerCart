@@ -1,5 +1,6 @@
 // This file contains JavaScript code that is used to interact with the server
 
+// Function to add an item to the cart
 document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', function(event) {
         if (event.target.classList.contains('add-to-cart')) {
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Function to update the quantity of an item in the cart
 function updateQuantity(itemId, action) {
     fetch(`/update_cart/${itemId}/${action}`, {
         method: 'POST',
@@ -27,6 +29,7 @@ function updateQuantity(itemId, action) {
     });
 }
 
+// Function to delete an item from the cart
 function deleteItem(itemId) {
     if (confirm('Are you sure that you want to remove this item from your cart?')) {
         fetch(`/delete_item/${itemId}`, {
@@ -40,6 +43,7 @@ function deleteItem(itemId) {
     }
 }
 
+// Function to place an order
 function placeOrder(itemsInCart) {
     if (itemsInCart === 0) {
         alert('No items in cart, please go back and make an order!');
@@ -71,6 +75,7 @@ function placeOrder(itemsInCart) {
     }
 }
 
+// Function to accept a delivery
 function acceptDelivery(deliveryId) {
     fetch(`/accept_delivery/${deliveryId}`, { method: 'POST' })
         .then(response => {
@@ -84,6 +89,7 @@ function acceptDelivery(deliveryId) {
         .catch(error => console.error('Error accepting delivery:', error));
 }
 
+// Function to decline a delivery
 function declineDelivery(deliveryId) {
     fetch(`/decline_delivery/${deliveryId}`, { method: 'POST' })
         .then(response => {
@@ -97,6 +103,7 @@ function declineDelivery(deliveryId) {
         .catch(error => console.error('Error declining delivery:', error));
 }
 
+// Function to mark a step as complete in timeline
 function markStepComplete(stepId) {
     const stepElement = document.getElementById(stepId);
     const circleElement = stepElement.querySelector('.circle');
@@ -107,6 +114,3 @@ function markStepComplete(stepId) {
     buttonElement.textContent = 'Completed';
     buttonElement.style.backgroundColor = 'green';
 }
-
-
-
