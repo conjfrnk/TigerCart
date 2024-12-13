@@ -931,6 +931,42 @@ def update_cart(item_id, action):
     return jsonify({"success": True})
 
 
+@app.route("/order_details/<int:order_id>")
+def order_details(order_id):
+    current_username = authenticate()
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
+    order_row = cursor.fetchone()
+    conn.commit()
+    conn.close()
+
+    if not order_row:
+        return "Order not found.", 404
+
+    order = dict(order_row)
+    order["cart"] = json.loads(order.get("cart", "{}"))
+    cart = order["cart"]
+
+    subtotal = sum(
+        details.get("quantity", 0) * details.get("price", 0)
+        for item_id, details in cart.items()
+    )
+
+    if "timestamp" in order and order["timestamp"]:
+        order["timestamp"] = convert_to_est(order["timestamp"])
+
+    return render_template(
+        "order_details.html",
+        order=order,
+        subtotal=subtotal,
+        username=current_username,
+    )
+
+
 @app.route("/place_order", methods=["POST"])
 def place_order():
     user_id = session.get("user_id")
@@ -1016,6 +1052,11 @@ def order_status(order_id):
 
     timeline = json.loads(order["timeline"])
     return jsonify({"timeline": timeline})
+
+
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# Delivery Management
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
@@ -1132,6 +1173,58 @@ def update_checklist():
 
     return jsonify({"success": True, "timeline": timeline}), 200
 
+@app.route("/deliverer_timeline/<int:delivery_id>")
+def deliverer_timeline(delivery_id):
+    current_username = authenticate()
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("auth.login"))
+
+    conn = get_main_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM orders WHERE id = %s", (delivery_id,))
+    order_row = cursor.fetchone()
+    conn.close()
+
+    if not order_row:
+        return "Order not found.", 404
+
+    order = dict(order_row)
+    shopper_avg_rating = get_average_rating(order["user_id"], "shopper")
+
+    user_conn = get_user_db_connection()
+    user_cursor = user_conn.cursor()
+    user_cursor.execute(
+        "SELECT venmo_handle, phone_number FROM users WHERE user_id = %s",
+        (order["user_id"],),
+    )
+    shopper = user_cursor.fetchone()
+    if shopper:
+        shopper_venmo = shopper["venmo_handle"]
+        shopper_phone = shopper["phone_number"]
+    else:
+        shopper_venmo = None
+        shopper_phone = None
+    user_conn.close()
+
+    order["timeline"] = json.loads(order.get("timeline", "{}"))
+    order["cart"] = json.loads(order.get("cart", "{}"))
+
+    if "timestamp" in order and order["timestamp"]:
+        order["timestamp"] = convert_to_est(order["timestamp"])
+
+    return render_template(
+        "deliverer_timeline.html",
+        order=order,
+        shopper_venmo=shopper_venmo,
+        shopper_phone=shopper_phone,
+        shopper_avg_rating=shopper_avg_rating,
+        username=current_username,
+    )
+
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# Utilities (Timezone, Ratings, Favorites)
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 @app.route("/add_favorite/<item_id>", methods=["POST"])
 def add_favorite(item_id):
@@ -1197,92 +1290,6 @@ def remove_favorite(item_id):
         )
     finally:
         conn.close()
-
-
-@app.route("/deliverer_timeline/<int:delivery_id>")
-def deliverer_timeline(delivery_id):
-    current_username = authenticate()
-    user_id = session.get("user_id")
-    if not user_id:
-        return redirect(url_for("auth.login"))
-
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders WHERE id = %s", (delivery_id,))
-    order_row = cursor.fetchone()
-    conn.close()
-
-    if not order_row:
-        return "Order not found.", 404
-
-    order = dict(order_row)
-    shopper_avg_rating = get_average_rating(order["user_id"], "shopper")
-
-    user_conn = get_user_db_connection()
-    user_cursor = user_conn.cursor()
-    user_cursor.execute(
-        "SELECT venmo_handle, phone_number FROM users WHERE user_id = %s",
-        (order["user_id"],),
-    )
-    shopper = user_cursor.fetchone()
-    if shopper:
-        shopper_venmo = shopper["venmo_handle"]
-        shopper_phone = shopper["phone_number"]
-    else:
-        shopper_venmo = None
-        shopper_phone = None
-    user_conn.close()
-
-    order["timeline"] = json.loads(order.get("timeline", "{}"))
-    order["cart"] = json.loads(order.get("cart", "{}"))
-
-    if "timestamp" in order and order["timestamp"]:
-        order["timestamp"] = convert_to_est(order["timestamp"])
-
-    return render_template(
-        "deliverer_timeline.html",
-        order=order,
-        shopper_venmo=shopper_venmo,
-        shopper_phone=shopper_phone,
-        shopper_avg_rating=shopper_avg_rating,
-        username=current_username,
-    )
-
-
-@app.route("/order_details/<int:order_id>")
-def order_details(order_id):
-    current_username = authenticate()
-    if "user_id" not in session:
-        return redirect(url_for("auth.login"))
-
-    conn = get_main_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders WHERE id = %s", (order_id,))
-    order_row = cursor.fetchone()
-    conn.commit()
-    conn.close()
-
-    if not order_row:
-        return "Order not found.", 404
-
-    order = dict(order_row)
-    order["cart"] = json.loads(order.get("cart", "{}"))
-    cart = order["cart"]
-
-    subtotal = sum(
-        details.get("quantity", 0) * details.get("price", 0)
-        for item_id, details in cart.items()
-    )
-
-    if "timestamp" in order and order["timestamp"]:
-        order["timestamp"] = convert_to_est(order["timestamp"])
-
-    return render_template(
-        "order_details.html",
-        order=order,
-        subtotal=subtotal,
-        username=current_username,
-    )
 
 
 @app.route("/submit_rating", methods=["POST"])
