@@ -415,18 +415,31 @@ def cart_view():
     if "user_id" not in session:
         return redirect(url_for("home"))
 
-    items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-    )
-    cart_response = requests.get(
-        f"{SERVER_URL}/cart",
-        json={"user_id": session["user_id"]},
-        timeout=REQUEST_TIMEOUT,
-    )
+    try:
+        # Fetch items and cart data
+        items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+        cart_response = requests.get(
+            f"{SERVER_URL}/cart",
+            json={"user_id": session["user_id"]},
+            timeout=REQUEST_TIMEOUT,
+        )
 
-    sample_items = items_response.json()
-    cart = cart_response.json()
+        # Parse responses
+        sample_items = items_response.json()
 
+        # Check if cart response is valid
+        if cart_response.status_code != 200:
+            logging.error(f"Cart fetch failed: {cart_response.json()}")
+            cart = {}
+        else:
+            cart = cart_response.json()
+
+    except Exception as e:
+        logging.error(f"Error fetching cart data: {e}")
+        sample_items = {}
+        cart = {}
+
+    # Calculate subtotal, delivery fee, and total
     subtotal = sum(
         details.get("quantity", 0)
         * sample_items.get(item_id, {}).get("price", 0)
