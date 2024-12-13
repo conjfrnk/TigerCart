@@ -645,7 +645,7 @@ def logout_confirmation():
 # API Endpoints for Data Operations
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-
+# Function to get the items in a category
 @app.route("/get_category_items")
 def get_category_items():
     category = request.args.get("category")
@@ -708,7 +708,7 @@ def get_category_items():
 
     return jsonify({"items": items_in_category})
 
-
+# Function to get the items in the cart
 @app.route("/get_cart_data")
 def get_cart_data():
     user_id = session.get("user_id")
@@ -758,7 +758,7 @@ def get_cart_data():
         }
     )
 
-
+# Function to get the number of items in the cart
 @app.route("/get_cart_count", methods=["GET"])
 def get_cart_count():
     user_id = session.get("user_id")
@@ -785,7 +785,7 @@ def get_cart_count():
     items_in_cart = len(response.json())
     return jsonify({"success": True, "cart_count": items_in_cart})
 
-
+# Function to get the cart status
 @app.route("/get_cart_status", methods=["GET"])
 def get_cart_status():
     user_id = session.get("user_id")
@@ -810,7 +810,7 @@ def get_cart_status():
 # Shopping and Cart Management
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-
+# Function to add an item to the cart
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
     response = requests.post(
@@ -825,7 +825,7 @@ def add_to_cart(item_id):
 
     return jsonify(response.json())
 
-
+# Function to delete an item from the cart
 @app.route("/delete_item/<item_id>", methods=["POST"])
 def delete_item(item_id):
     user_id = session["user_id"]
@@ -878,7 +878,7 @@ def delete_item(item_id):
         }
     )
 
-
+# Function to update the cart
 @app.route("/update_cart/<item_id>/<action>", methods=["POST"])
 def update_cart(item_id, action):
     user_id = session["user_id"]
@@ -947,6 +947,11 @@ def update_cart(item_id, action):
     return jsonify({"success": True})
 
 
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# Order Management
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+# Function to get the order details
 @app.route("/order_details/<int:order_id>")
 def order_details(order_id):
     current_username = authenticate()
@@ -982,7 +987,7 @@ def order_details(order_id):
         username=current_username,
     )
 
-
+# Function to place an order
 @app.route("/place_order", methods=["POST"])
 def place_order():
     user_id = session.get("user_id")
@@ -1052,7 +1057,7 @@ def place_order():
 
     return jsonify({"success": True}), 200
 
-
+# Function to see the order status
 @app.route("/order_status/<int:order_id>")
 def order_status(order_id):
     conn = get_main_db_connection()
@@ -1074,7 +1079,7 @@ def order_status(order_id):
 # Delivery Management
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-
+# Function to accept a delivery
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
     user_id = session.get("user_id")
@@ -1086,7 +1091,7 @@ def accept_delivery(delivery_id):
         url_for("deliverer_timeline", delivery_id=delivery_id)
     )
 
-
+# Function to decline a delivery
 @app.route(
     "/decline_delivery/<delivery_id>",
     methods=["POST"],
@@ -1101,7 +1106,7 @@ def decline_delivery_route(delivery_id):
         return redirect(url_for("deliver"))
     return "Error declining delivery", response.status_code
 
-
+# Function to update the checklist on timeline
 @app.route("/update_checklist", methods=["POST"])
 def update_checklist():
     data = request.get_json()
@@ -1189,6 +1194,7 @@ def update_checklist():
 
     return jsonify({"success": True, "timeline": timeline}), 200
 
+# Function to get the deliverer timeline
 @app.route("/deliverer_timeline/<int:delivery_id>")
 def deliverer_timeline(delivery_id):
     current_username = authenticate()
@@ -1242,6 +1248,7 @@ def deliverer_timeline(delivery_id):
 # Utilities (Timezone, Ratings, Favorites)
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
+# Function to add an item to favorites
 @app.route("/add_favorite/<item_id>", methods=["POST"])
 def add_favorite(item_id):
     user_id = session.get("user_id")
@@ -1275,7 +1282,7 @@ def add_favorite(item_id):
     finally:
         conn.close()
 
-
+# Function to remove an item from favorites
 @app.route("/remove_favorite/<item_id>", methods=["POST"])
 def remove_favorite(item_id):
     user_id = session.get("user_id")
@@ -1307,7 +1314,7 @@ def remove_favorite(item_id):
     finally:
         conn.close()
 
-
+# Function to submit a rating
 @app.route("/submit_rating", methods=["POST"])
 def submit_rating():
     user_id = session.get("user_id")
@@ -1416,6 +1423,7 @@ def submit_rating():
         200,
     )
 
+# Function to convert a UTC datetime to EST
 def convert_to_est(dt_utc):
     # dt_utc is already a datetime object with a UTC timezone or naive (assume UTC)
     if dt_utc.tzinfo is None:

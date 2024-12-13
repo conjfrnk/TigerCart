@@ -15,7 +15,7 @@ from database import get_user_db_connection
 auth_bp = Blueprint("auth", __name__)
 _CAS_URL = "https://fed.princeton.edu/cas/"
 
-
+# Strip ticket from URL
 def strip_ticket(url):
     if url is None:
         return "something is badly wrong"
@@ -23,14 +23,14 @@ def strip_ticket(url):
     url = re.sub(r"\?&?$|&$", "", url)
     return url
 
-
+# Create SSL context
 def create_ssl_context():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     return context
 
-
+# Validate ticket
 def validate(ticket):
     val_url = (
         _CAS_URL
@@ -55,7 +55,7 @@ def validate(ticket):
         return None
     return second_line
 
-
+# Authenticate user
 def authenticate():
     if "username" in flask.session:
         return flask.session.get("username")
@@ -101,13 +101,13 @@ def authenticate():
     flask.session["user_id"] = user_id
     return username
 
-
+# Logout user
 @auth_bp.route("/logoutapp", methods=["GET"])
 def logoutapp():
     session.clear()
     return render_template("loggedout.html")
 
-
+# Logout CAS
 @auth_bp.route("/logoutcas", methods=["GET"])
 def logoutcas():
     session.clear()

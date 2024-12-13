@@ -13,7 +13,7 @@ from database import (
     populate_items_from_csv,
 )
 
-
+# Drop all tables and regenerate them
 def drop_all_tables():
     """
     Drops all known tables from the database to start fresh.
@@ -35,7 +35,7 @@ def drop_all_tables():
     conn.commit()
     conn.close()
 
-
+# Run the initialization code
 if __name__ == "__main__":
     drop_all_tables()
     init_user_db()

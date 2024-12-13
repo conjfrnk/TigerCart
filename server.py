@@ -14,7 +14,7 @@ from db_utils import update_order_claim_status, get_user_cart
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
-
+# Get items from the database
 @app.route("/items", methods=["GET"])
 def get_items():
     conn = get_main_db_connection()
@@ -26,7 +26,7 @@ def get_items():
     items_dict = {item["store_code"]: dict(item) for item in items}
     return jsonify(items_dict)
 
-
+# Manage user cart
 @app.route("/cart", methods=["GET", "POST"])
 def manage_cart():
     data = request.get_json()
@@ -89,7 +89,7 @@ def manage_cart():
 
     return jsonify(cart)
 
-
+# Get user cart
 def fetch_user_name(user_id, cursor_users):
     cursor_users.execute(
         "SELECT name FROM users WHERE user_id = %s", (user_id,)
@@ -97,7 +97,7 @@ def fetch_user_name(user_id, cursor_users):
     user = cursor_users.fetchone()
     return user["name"] if user else "Unknown User"
 
-
+# Fetch detailed cart
 def fetch_detailed_cart(cart, cursor_orders):
     detailed_cart = {}
     subtotal = 0
@@ -122,7 +122,7 @@ def fetch_detailed_cart(cart, cursor_orders):
 
     return detailed_cart, subtotal
 
-
+# Get deliveries
 @app.route("/deliveries", methods=["GET"])
 def get_deliveries():
     data = request.get_json()
@@ -176,7 +176,7 @@ def get_deliveries():
     conn_users.close()
     return jsonify(deliveries)
 
-
+# Get delivery
 @app.route("/delivery/<delivery_id>", methods=["GET"])
 def get_delivery(delivery_id):
     conn = get_main_db_connection()
@@ -208,7 +208,7 @@ def get_delivery(delivery_id):
     conn.close()
     return jsonify({"error": "Delivery not found"}), 404
 
-
+# Accept delivery
 @app.route("/accept_delivery/<delivery_id>", methods=["POST"])
 def accept_delivery_route(delivery_id):
     data = request.get_json()
@@ -224,7 +224,7 @@ def accept_delivery_route(delivery_id):
     update_order_claim_status(user_id, delivery_id)
     return jsonify({"success": True}), 200
 
-
+# Decline delivery
 @app.route("/decline_delivery/<delivery_id>", methods=["POST"])
 def decline_delivery(delivery_id):
     conn = get_main_db_connection()
@@ -237,7 +237,7 @@ def decline_delivery(delivery_id):
     conn.close()
     return jsonify({"success": True}), 200
 
-
+# Get shopper timeline
 @app.route("/get_shopper_timeline", methods=["GET"])
 def get_shopper_timeline():
     order_id = request.args.get("order_id")
