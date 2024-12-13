@@ -47,6 +47,9 @@ EST = timezone(timedelta(hours=-5))
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 # User Data Management
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+
+# Function to get user data from the user database
 def get_user_data(user_id):
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -55,7 +58,7 @@ def get_user_data(user_id):
     conn.close()
     return user
 
-
+# Function to get user orders from the main database
 def get_user_orders(user_id):
     conn = get_main_db_connection()
     cursor = conn.cursor()
@@ -67,7 +70,7 @@ def get_user_orders(user_id):
     conn.close()
     return orders
 
-
+# Function to calculate user stats
 def calculate_user_stats(orders):
     total_spent = 0
     total_items = 0
@@ -86,7 +89,7 @@ def calculate_user_stats(orders):
         "total_items": total_items,
     }
 
-
+# Function to get the average rating of a user for a given role
 def get_average_rating(user_id, role):
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -112,7 +115,7 @@ def get_average_rating(user_id, role):
         return round(row["s"] / row["c"], 1)
     return None
 
-
+# Function to update the rating of a user
 def update_rating(user_id, rater_role, rating):
     if rating < 1 or rating > 5:
         return False
@@ -149,7 +152,7 @@ def update_rating(user_id, rater_role, rating):
     conn.close()
     return True
 
-
+# Function to get the delivery stats for a deliverer
 def get_delivery_stats(user_id):
     """
     Calculate real delivery stats for a deliverer.
@@ -186,7 +189,7 @@ def get_delivery_stats(user_id):
 # Routes for Navigation and Rendering
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-
+# Route for the home page
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
 def home():
@@ -215,7 +218,7 @@ def home():
 
     return render_template("home.html", username=username)
 
-
+# Route for the shop page
 @app.route("/shop")
 def shop():
     username = authenticate()
@@ -272,7 +275,7 @@ def shop():
         username=username,
     )
 
-
+# Route for the favorites page
 @app.route("/favorites")
 def favorites_view():
     username = authenticate()
@@ -307,7 +310,7 @@ def favorites_view():
         username=username,
     )
 
-
+# Route for the shopper timeline page
 @app.route("/shopper_timeline")
 def shopper_timeline():
     username = authenticate()
@@ -370,7 +373,7 @@ def shopper_timeline():
         username=username,
     )
 
-
+# Route for the category view page
 @app.route("/category_view/<category>")
 def category_view(category):
     username = authenticate()
@@ -405,7 +408,7 @@ def category_view(category):
         username=username,
     )
 
-
+# Route for the cart view page
 @app.route("/cart_view")
 def cart_view():
     username = authenticate()
@@ -443,7 +446,7 @@ def cart_view():
         username=username,
     )
 
-
+# Function to return the deliverer page (deliver.html)
 @app.route("/deliver")
 def deliver():
     current_username = authenticate()
@@ -488,7 +491,7 @@ def deliver():
         username=current_username,
     )
 
-
+# Function to see the details of a delivery
 @app.route("/delivery/<delivery_id>")
 def delivery_details(delivery_id):
     current_username = authenticate()
@@ -504,7 +507,7 @@ def delivery_details(delivery_id):
         )
     return "Delivery not found", 404
 
-
+# Function to view the profile page
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
     username = authenticate()
@@ -603,7 +606,7 @@ def profile():
         delivery_stats=delivery_stats,  # now includes money_made
     )
 
-
+# Function to confirm an order
 @app.route("/order_confirmation")
 def order_confirmation():
     username = authenticate()
@@ -619,7 +622,7 @@ def order_confirmation():
         username=username,
     )
 
-
+# Route to confirm a logout
 @app.route("/logout_confirmation")
 def logout_confirmation():
     return render_template("logout_confirmation.html")
