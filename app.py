@@ -630,6 +630,166 @@ def logout_confirmation():
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 
+@app.route("/get_category_items")
+def get_category_items():
+    category = request.args.get("category")
+    if not category:
+        return jsonify({"error": "Category not specified"}), 400
+
+    if category == "Favorites":
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "User not logged in"}), 401
+
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
+        )
+        favorite_items = {
+            str(row["item_id"]) for row in cursor.fetchall()
+        }
+        conn.close()
+
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
+        all_items = response.json()
+        items_in_category = {
+            k: v for k, v in all_items.items() if k in favorite_items
+        }
+    else:
+        db_category = category.upper()
+        response = requests.get(
+            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+        )
+        all_items = response.json()
+        items_in_category = {
+            k: v
+            for k, v in all_items.items()
+            if v.get("category", "").replace(" ", "")
+            == db_category.replace(" ", "")
+        }
+
+    user_id = session.get("user_id")
+    favorite_item_ids = set()
+    if user_id:
+        conn = get_user_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT item_id FROM favorites WHERE user_id = %s",
+            (user_id,),
+        )
+        favorite_items = cursor.fetchall()
+        conn.close()
+        favorite_item_ids = {
+            str(row["item_id"]) for row in favorite_items
+        }
+
+    for item_id_str, item in items_in_category.items():
+        item["is_favorite"] = item_id_str in favorite_item_ids
+
+    return jsonify({"items": items_in_category})
+
+
+@app.route("/get_cart_data")
+def get_cart_data():
+    user_id = session.get("user_id")
+    if not user_id:
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
+
+    cart_response = requests.get(
+        f"{SERVER_URL}/cart",
+        json={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT,
+    )
+
+    if cart_response.status_code != 200:
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to fetch cart data"}
+            ),
+            500,
+        )
+
+    items_response = requests.get(
+        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
+    )
+    items = items_response.json()
+
+    cart = cart_response.json()
+    subtotal = sum(
+        details.get("quantity", 0)
+        * items.get(item_id, {}).get("price", 0)
+        for item_id, details in cart.items()
+        if isinstance(details, dict)
+    )
+    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+    total = round(subtotal + delivery_fee, 2)
+
+    return jsonify(
+        {
+            "success": True,
+            "cart": cart,
+            "items": items,
+            "subtotal": f"{subtotal:.2f}",
+            "delivery_fee": f"{delivery_fee:.2f}",
+            "total": f"{total:.2f}",
+        }
+    )
+
+
+@app.route("/get_cart_count", methods=["GET"])
+def get_cart_count():
+    user_id = session.get("user_id")
+    if not user_id:
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
+
+    response = requests.get(
+        f"{SERVER_URL}/cart",
+        json={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT,
+    )
+
+    if response.status_code != 200:
+        return (
+            jsonify(
+                {"success": False, "error": "Failed to fetch cart data"}
+            ),
+            500,
+        )
+
+    items_in_cart = len(response.json())
+    return jsonify({"success": True, "cart_count": items_in_cart})
+
+
+@app.route("/get_cart_status", methods=["GET"])
+def get_cart_status():
+    user_id = session.get("user_id")
+    if not user_id:
+        return (
+            jsonify({"success": False, "error": "User not logged in"}),
+            401,
+        )
+
+    user = get_user_cart(user_id)
+    if user is None:
+        return (
+            jsonify({"success": False, "error": "User not found"}),
+            404,
+        )
+
+    cart = json.loads(user["cart"]) if user["cart"] else {}
+    return jsonify({"success": True, "cart": cart})
+
+
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
     response = requests.post(
@@ -766,56 +926,6 @@ def update_cart(item_id, action):
     return jsonify({"success": True})
 
 
-@app.route("/get_cart_data")
-def get_cart_data():
-    user_id = session.get("user_id")
-    if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
-
-    cart_response = requests.get(
-        f"{SERVER_URL}/cart",
-        json={"user_id": user_id},
-        timeout=REQUEST_TIMEOUT,
-    )
-
-    if cart_response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to fetch cart data"}
-            ),
-            500,
-        )
-
-    items_response = requests.get(
-        f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-    )
-    items = items_response.json()
-
-    cart = cart_response.json()
-    subtotal = sum(
-        details.get("quantity", 0)
-        * items.get(item_id, {}).get("price", 0)
-        for item_id, details in cart.items()
-        if isinstance(details, dict)
-    )
-    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
-    total = round(subtotal + delivery_fee, 2)
-
-    return jsonify(
-        {
-            "success": True,
-            "cart": cart,
-            "items": items,
-            "subtotal": f"{subtotal:.2f}",
-            "delivery_fee": f"{delivery_fee:.2f}",
-            "total": f"{total:.2f}",
-        }
-    )
-
-
 @app.route("/order_status/<int:order_id>")
 def order_status(order_id):
     conn = get_main_db_connection()
@@ -902,69 +1012,6 @@ def place_order():
     user_conn.close()
 
     return jsonify({"success": True}), 200
-
-
-@app.route("/get_category_items")
-def get_category_items():
-    category = request.args.get("category")
-    if not category:
-        return jsonify({"error": "Category not specified"}), 400
-
-    if category == "Favorites":
-        user_id = session.get("user_id")
-        if not user_id:
-            return jsonify({"error": "User not logged in"}), 401
-
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT item_id FROM favorites WHERE user_id = %s",
-            (user_id,),
-        )
-        favorite_items = {
-            str(row["item_id"]) for row in cursor.fetchall()
-        }
-        conn.close()
-
-        response = requests.get(
-            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-        )
-        all_items = response.json()
-        items_in_category = {
-            k: v for k, v in all_items.items() if k in favorite_items
-        }
-    else:
-        db_category = category.upper()
-        response = requests.get(
-            f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
-        )
-        all_items = response.json()
-        items_in_category = {
-            k: v
-            for k, v in all_items.items()
-            if v.get("category", "").replace(" ", "")
-            == db_category.replace(" ", "")
-        }
-
-    user_id = session.get("user_id")
-    favorite_item_ids = set()
-    if user_id:
-        conn = get_user_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT item_id FROM favorites WHERE user_id = %s",
-            (user_id,),
-        )
-        favorite_items = cursor.fetchall()
-        conn.close()
-        favorite_item_ids = {
-            str(row["item_id"]) for row in favorite_items
-        }
-
-    for item_id_str, item in items_in_category.items():
-        item["is_favorite"] = item_id_str in favorite_item_ids
-
-    return jsonify({"items": items_in_category})
 
 @app.route("/accept_delivery/<int:delivery_id>", methods=["POST"])
 def accept_delivery(delivery_id):
@@ -1145,54 +1192,6 @@ def remove_favorite(item_id):
         )
     finally:
         conn.close()
-
-
-
-@app.route("/get_cart_count", methods=["GET"])
-def get_cart_count():
-    user_id = session.get("user_id")
-    if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
-
-    response = requests.get(
-        f"{SERVER_URL}/cart",
-        json={"user_id": user_id},
-        timeout=REQUEST_TIMEOUT,
-    )
-
-    if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to fetch cart data"}
-            ),
-            500,
-        )
-
-    items_in_cart = len(response.json())
-    return jsonify({"success": True, "cart_count": items_in_cart})
-
-
-@app.route("/get_cart_status", methods=["GET"])
-def get_cart_status():
-    user_id = session.get("user_id")
-    if not user_id:
-        return (
-            jsonify({"success": False, "error": "User not logged in"}),
-            401,
-        )
-
-    user = get_user_cart(user_id)
-    if user is None:
-        return (
-            jsonify({"success": False, "error": "User not found"}),
-            404,
-        )
-
-    cart = json.loads(user["cart"]) if user["cart"] else {}
-    return jsonify({"success": True, "cart": cart})
 
 
 @app.route("/deliverer_timeline/<int:delivery_id>")
