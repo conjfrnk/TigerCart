@@ -44,7 +44,9 @@ DELIVERY_FEE_PERCENTAGE = 0.1
 
 EST = timezone(timedelta(hours=-5))
 
-
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# User Data Management
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 def get_user_data(user_id):
     conn = get_user_db_connection()
     cursor = conn.cursor()
@@ -52,7 +54,6 @@ def get_user_data(user_id):
     user = cursor.fetchone()
     conn.close()
     return user
-
 
 def get_user_orders(user_id):
     conn = get_main_db_connection()
@@ -64,7 +65,6 @@ def get_user_orders(user_id):
     orders = cursor.fetchall()
     conn.close()
     return orders
-
 
 def calculate_user_stats(orders):
     total_spent = 0
@@ -83,7 +83,6 @@ def calculate_user_stats(orders):
         "total_spent": round(total_spent, 2),
         "total_items": total_items,
     }
-
 
 def get_average_rating(user_id, role):
     conn = get_user_db_connection()
@@ -109,7 +108,6 @@ def get_average_rating(user_id, role):
     if row and row["c"] and row["c"] > 0:
         return round(row["s"] / row["c"], 1)
     return None
-
 
 def update_rating(user_id, rater_role, rating):
     if rating < 1 or rating > 5:
@@ -147,18 +145,6 @@ def update_rating(user_id, rater_role, rating):
     conn.close()
     return True
 
-
-def convert_to_est(dt_utc):
-    # dt_utc is already a datetime object with a UTC timezone or naive (assume UTC)
-    if dt_utc.tzinfo is None:
-        # If it's a naive datetime, attach UTC tzinfo
-        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
-
-    EST = timezone(timedelta(hours=-5))
-    dt_est = dt_utc.astimezone(EST)
-    return dt_est.strftime("%Y-%m-%d %H:%M EST")
-
-
 def get_delivery_stats(user_id):
     """
     Calculate real delivery stats for a deliverer.
@@ -190,6 +176,9 @@ def get_delivery_stats(user_id):
         "money_made": round(money_made, 2),
     }
 
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+# Routes for Navigation and Rendering
+# –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 @app.route("/", methods=["GET"])
 @app.route("/index", methods=["GET"])
@@ -1387,6 +1376,15 @@ def submit_rating():
         200,
     )
 
+def convert_to_est(dt_utc):
+    # dt_utc is already a datetime object with a UTC timezone or naive (assume UTC)
+    if dt_utc.tzinfo is None:
+        # If it's a naive datetime, attach UTC tzinfo
+        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+
+    EST = timezone(timedelta(hours=-5))
+    dt_est = dt_utc.astimezone(EST)
+    return dt_est.strftime("%Y-%m-%d %H:%M EST")
 
 if __name__ == "__main__":
     init_user_db()
