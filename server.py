@@ -231,6 +231,35 @@ def get_shopper_timeline():
 
     return jsonify({"error": "Order not found"}), 404
 
+# Get user cart
+def fetch_user_name(user_id, cursor_users):
+    cursor_users.execute(
+        "SELECT name FROM users WHERE user_id = %s", (user_id,)
+    )
+    user = cursor_users.fetchone()
+    return user["name"] if user else "Unknown User"
+# Fetch detailed cart
+def fetch_detailed_cart(cart, cursor_orders):
+    detailed_cart = {}
+    subtotal = 0
+    for item_id, item_info in cart.items():
+        cursor_orders.execute(
+            "SELECT name, price FROM items WHERE store_code = %s",
+            (item_id,),
+        )
+        item_data = cursor_orders.fetchone()
+        if item_data:
+            item_price = item_data["price"]
+            quantity = item_info["quantity"]
+            item_total = quantity * item_price
+            subtotal += item_total
+            detailed_cart[item_id] = {
+                "name": item_data["name"],
+                "price": item_price,
+                "quantity": quantity,
+                "total": item_total,
+            }
+    return detailed_cart, subtotal
 
 if __name__ == "__main__":
     app.run(port=5150, debug=get_debug_mode())
