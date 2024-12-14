@@ -30,14 +30,12 @@ from database import (
     init_user_db,
 )
 from db_utils import update_order_claim_status, get_user_cart
-from flask_wtf.csrf import CSRFProtect
 
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.register_blueprint(auth_bp)
-csrf = CSRFProtect(app)
 
 SERVER_URL = "http://localhost:5150"
 REQUEST_TIMEOUT = 5
@@ -413,6 +411,7 @@ def category_view(category):
 @app.route("/cart_view")
 def cart_view():
     username = authenticate()
+    user_id = session.get("user_id")
     if "user_id" not in session:
         return redirect(url_for("home"))
 
@@ -816,15 +815,12 @@ def get_cart_status():
 @app.route("/add_to_cart/<item_id>", methods=["POST"])
 def add_to_cart(item_id):
     user_id = session.get("user_id")
-    csrf_token = session.get("csrf_token")
 
     if not user_id:
         return jsonify({"error": "User not logged in"}), 401
 
-    # Include the CSRF token in the request headers
     headers = {
         "Content-Type": "application/json",
-        "X-CSRFToken": csrf_token,
     }
 
     # Send the POST request to the API server
@@ -868,27 +864,23 @@ def delete_item(item_id):
     user_id = session["user_id"]
     response = requests.post(
         f"{SERVER_URL}/cart",
-        json={
-            "user_id": user_id,
-            "item_id": item_id,
-            "action": "delete",
-        },
+        json={"user_id": user_id, "item_id": item_id, "action": "delete"},
         timeout=REQUEST_TIMEOUT,
     )
 
     if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to delete item"}
-            ),
-            500,
-        )
+        return jsonify({"success": False, "error": "Failed to delete item"}), 500
 
     cart_response = requests.get(
         f"{SERVER_URL}/cart",
         params={"user_id": user_id},
         timeout=REQUEST_TIMEOUT,
     )
+
+    if cart_response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to fetch updated cart"}), 500
+
+    cart = cart_response.json()  # Parse the cart here
 
     items_response = requests.get(
         f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT
@@ -897,22 +889,20 @@ def delete_item(item_id):
 
     subtotal = sum(
         details.get("quantity", 0)
-        * items.get(item_id, {}).get("price", 0)
-        for item_id, details in cart.items()
+        * items.get(i_id, {}).get("price", 0)
+        for i_id, details in cart.items()
         if isinstance(details, dict)
     )
     delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
     total = round(subtotal + delivery_fee, 2)
 
-    return jsonify(
-        {
-            "success": True,
-            "cart": cart,
-            "subtotal": f"{subtotal:.2f}",
-            "delivery_fee": f"{delivery_fee:.2f}",
-            "total": f"{total:.2f}",
-        }
-    )
+    return jsonify({
+        "success": True,
+        "cart": cart,
+        "subtotal": f"{subtotal:.2f}",
+        "delivery_fee": f"{delivery_fee:.2f}",
+        "total": f"{total:.2f}"
+    })
 
 # Function to update the cart
 @app.route("/update_cart/<item_id>/<action>", methods=["POST"])
@@ -922,66 +912,76 @@ def update_cart(item_id, action):
     if action == "increase":
         response = requests.post(
             f"{SERVER_URL}/cart",
-            json={
-                "user_id": user_id,
-                "item_id": item_id,
-                "action": "add",
-            },
+            json={"user_id": user_id, "item_id": item_id, "action": "add"},
             timeout=REQUEST_TIMEOUT,
         )
     elif action == "decrease":
+        # First, get the current cart correctly:
         cart_response = requests.get(
             f"{SERVER_URL}/cart",
-            json={"user_id": user_id},
+            params={"user_id": user_id},
             timeout=REQUEST_TIMEOUT,
         )
+        if cart_response.status_code != 200:
+            return jsonify({"success": False, "error": "Failed to get cart"}), 500
+
         cart = cart_response.json()
         quantity = cart.get(item_id, {}).get("quantity", 0)
 
         if quantity > 1:
             response = requests.post(
                 f"{SERVER_URL}/cart",
-                json={
-                    "user_id": user_id,
-                    "item_id": item_id,
-                    "quantity": quantity - 1,
-                    "action": "update",
-                },
+                json={"user_id": user_id, "item_id": item_id, "quantity": quantity - 1, "action": "update"},
                 timeout=REQUEST_TIMEOUT,
             )
         elif quantity == 1:
             response = requests.post(
                 f"{SERVER_URL}/cart",
-                json={
-                    "user_id": user_id,
-                    "item_id": item_id,
-                    "action": "delete",
-                },
+                json={"user_id": user_id, "item_id": item_id, "action": "delete"},
                 timeout=REQUEST_TIMEOUT,
             )
         else:
-            return (
-                jsonify(
-                    {"success": False, "error": "Item not in cart"}
-                ),
-                400,
-            )
+            return jsonify({"success": False, "error": "Item not in cart"}), 400
     else:
-        return (
-            jsonify({"success": False, "error": "Invalid action"}),
-            400,
-        )
+        return jsonify({"success": False, "error": "Invalid action"}), 400
 
     if response.status_code != 200:
-        return (
-            jsonify(
-                {"success": False, "error": "Failed to update cart"}
-            ),
-            500,
-        )
+        return jsonify({"success": False, "error": "Failed to update cart"}), 500
 
-    return jsonify({"success": True})
+    # Fetch updated cart and items to return updated totals
+    updated_cart_response = requests.get(
+        f"{SERVER_URL}/cart",
+        params={"user_id": user_id},
+        timeout=REQUEST_TIMEOUT,
+    )
 
+    if updated_cart_response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to fetch updated cart"}), 500
+
+    updated_cart = updated_cart_response.json()
+
+    items_response = requests.get(f"{SERVER_URL}/items", timeout=REQUEST_TIMEOUT)
+    if items_response.status_code != 200:
+        return jsonify({"success": False, "error": "Failed to fetch items"}), 500
+
+    items = items_response.json()
+
+    # Recalculate totals
+    subtotal = sum(
+        details.get("quantity", 0) * items.get(i_id, {}).get("price", 0)
+        for i_id, details in updated_cart.items()
+        if isinstance(details, dict)
+    )
+    delivery_fee = round(subtotal * DELIVERY_FEE_PERCENTAGE, 2)
+    total = round(subtotal + delivery_fee, 2)
+
+    return jsonify({
+        "success": True,
+        "cart": updated_cart,
+        "subtotal": f"{subtotal:.2f}",
+        "delivery_fee": f"{delivery_fee:.2f}",
+        "total": f"{total:.2f}"
+    }), 200
 
 # –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 # Order Management

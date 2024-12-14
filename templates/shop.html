@@ -195,14 +195,12 @@
 
 
  function addToCart(itemId) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const userId = "{{ session.get('user_id') }}"; // Pass user_id from session
 
     fetch(`/add_to_cart/${itemId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken, // Include CSRF token
         },
         body: JSON.stringify({ user_id: userId })
     })

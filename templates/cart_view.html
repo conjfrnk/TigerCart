@@ -10,9 +10,9 @@
 
 <h2><u>Items</u></h2>
 {% if cart.items() %}
-    <p>Below are the items that are currently in your cart:</p>
-    <ul>
-        <div class="table-responsive">
+<p>Below are the items that are currently in your cart:</p>
+<ul>
+    <div class="table-responsive">
         <table id="cart-table" style="border: 1px solid rgb(200, 200, 200); border-collapse: collapse;" align="center">
             <thead style="border: 1px solid rgb(200, 200, 200);">
                 <tr>
@@ -43,8 +43,8 @@
                 {% endfor %}
             </tbody>
         </table>
-        </div>
-    
+    </div>
+
     <hr>
 
     <h2><u>Cost</u></h2>
@@ -60,87 +60,116 @@
     <p>Click the button below to place your order:</p>
     {% set order_confirmation = "order_confirmation" %}
     <button type="button" onclick="window.location.href='{{ url_for(order_confirmation) }}'">Place Order</button>
-{% else %}
+    {% else %}
     <p>There are no items in your cart. Please add at least one item to your cart before you place an order!</p>
-{% endif %}
+    {% endif %}
 
-<hr>
+    <hr>
 
-<h2><strong><u>Continue Shopping</u></strong></h2>
-<p>Click the button below to continue shopping:</p>
-<a href="{{ url_for('shop') }}">Shop</a>
+    <h2><strong><u>Continue Shopping</u></strong></h2>
+    <p>Click the button below to continue shopping:</p>
+    <a href="{{ url_for('shop') }}">Shop</a>
 
-<!-- JavaScript for dynamic cart updates -->
-<script>
-    function deleteItem(itemId) {
-        fetch(`/delete_item/${itemId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  // Remove the item's row from the table
-                  const itemRow = document.getElementById(`item-row-${itemId}`);
-                  if (itemRow) {
-                      itemRow.remove();
-                  }
+    <!-- JavaScript for dynamic cart updates -->
+    <script>
+        function deleteItem(itemId) {
+            fetch(`/delete_item/${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the item's row from the table
+                        const itemRow = document.getElementById(`item-row-${itemId}`);
+                        if (itemRow) {
+                            itemRow.remove();
+                        }
 
-                  // Update the totals
-                  document.getElementById('subtotal').textContent = data.subtotal;
-                  document.getElementById('delivery-fee').textContent = data.delivery_fee;
-                  document.getElementById('total').textContent = data.total;
+                        // Update the totals
+                        document.getElementById('subtotal').textContent = data.subtotal;
+                        document.getElementById('delivery-fee').textContent = data.delivery_fee;
+                        document.getElementById('total').textContent = data.total;
 
-                  // Check if the cart is empty
-                  const cartTable = document.getElementById('cart-table');
-                  if (cartTable.querySelector('tbody').children.length === 0) {
-                      cartTable.remove();
-                      document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
-                  }
-              } else {
-                  alert(data.error || 'Failed to delete item.');
-              }
-          }).catch(error => {
-              console.error('Error deleting item:', error);
-              alert('An error occurred while deleting the item.');
-          });
-    }
+                        // Check if the cart is empty
+                        const cartTable = document.getElementById('cart-table');
+                        if (cartTable.querySelector('tbody').children.length === 0) {
+                            cartTable.remove();
+                            document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
+                        }
+                    } else {
+                        alert(data.error || 'Failed to delete item.');
+                    }
+                }).catch(error => {
+                    console.error('Error deleting item:', error);
+                    alert('An error occurred while deleting the item.');
+                });
+        }
+        function updateQuantity(itemId, action) {
+            fetch(`/update_cart/${itemId}/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update DOM based on data.cart, data.subtotal, etc.
+                        updateCartTable(data);
+                    } else {
+                        alert(data.error || 'Failed to update item quantity.');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
+        }
 
-    function updateQuantity(itemId, action) {
-        fetch(`/update_cart/${itemId}/${action}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  // Refresh the cart data
-                  refreshCart();
-              } else {
-                  alert(data.error || 'Failed to update item quantity.');
-              }
-          }).catch(error => {
-              console.error('Error updating item quantity:', error);
-              alert('An error occurred while updating the item quantity.');
-          });
-    }
+        function updateCartTable(data) {
+            const cartTableBody = document.querySelector('#cart-table tbody');
+            cartTableBody.innerHTML = '';
 
-    function refreshCart() {
-        fetch(`{{ url_for('get_cart_data') }}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update the cart table
-                    const cartTableBody = document.querySelector('#cart-table tbody');
-                    cartTableBody.innerHTML = '';
+            for (const [itemId, details] of Object.entries(data.cart)) {
+                // Assume items are known or fetched. If needed, fetch items again.
+                const itemName = /* get item name from data.items if returned or store globally */;
+                const itemPrice = /* get item price similarly */;
 
-                    for (const [itemId, details] of Object.entries(data.cart)) {
-                        const item = data.items[itemId];
-                        const tr = document.createElement('tr');
-                        tr.id = `item-row-${itemId}`;
-                        tr.innerHTML = `
+                const tr = document.createElement('tr');
+                tr.id = `item-row-${itemId}`;
+                tr.innerHTML = `
+      <td>${itemName}</td>
+      <td>${itemPrice}</td>
+      <td><button onclick="updateQuantity('${itemId}', 'decrease')">-</button></td>
+      <td>${details.quantity}</td>
+      <td><button onclick="updateQuantity('${itemId}', 'increase')">+</button></td>
+      <td><button class="delete-button" onclick="deleteItem('${itemId}')">Delete</button></td>
+    `;
+                cartTableBody.appendChild(tr);
+            }
+
+            document.getElementById('subtotal').textContent = data.subtotal;
+            document.getElementById('delivery-fee').textContent = data.delivery_fee;
+            document.getElementById('total').textContent = data.total;
+
+            if (Object.keys(data.cart).length === 0) {
+                document.getElementById('cart-table').remove();
+            }
+        }
+
+        function refreshCart() {
+            fetch(`{{ url_for('get_cart_data') }}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the cart table
+                        const cartTableBody = document.querySelector('#cart-table tbody');
+                        cartTableBody.innerHTML = '';
+
+                        for (const [itemId, details] of Object.entries(data.cart)) {
+                            const item = data.items[itemId];
+                            const tr = document.createElement('tr');
+                            tr.id = `item-row-${itemId}`;
+                            tr.innerHTML = `
                             <td style="border: 1px solid rgb(200, 200, 200);">${item.name}</td>
                             <td style="border: 1px solid rgb(200, 200, 200);">${item.price}</td>
                             <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" onclick="updateQuantity('${itemId}', 'decrease')">-</button></td>
@@ -148,26 +177,26 @@
                             <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" onclick="updateQuantity('${itemId}', 'increase')">+</button></td>
                             <td style="border: 1px solid rgb(200, 200, 200);"><button type="button" class="delete-button" onclick="deleteItem('${itemId}')">Delete</button></td>
                         `;
-                        cartTableBody.appendChild(tr);
-                    }
+                            cartTableBody.appendChild(tr);
+                        }
 
-                    // Update the totals
-                    document.getElementById('subtotal').textContent = data.subtotal;
-                    document.getElementById('delivery-fee').textContent = data.delivery_fee;
-                    document.getElementById('total').textContent = data.total;
+                        // Update the totals
+                        document.getElementById('subtotal').textContent = data.subtotal;
+                        document.getElementById('delivery-fee').textContent = data.delivery_fee;
+                        document.getElementById('total').textContent = data.total;
 
-                    // If cart is empty
-                    if (Object.keys(data.cart).length === 0) {
-                        document.getElementById('cart-table').remove();
-                        document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
+                        // If cart is empty
+                        if (Object.keys(data.cart).length === 0) {
+                            document.getElementById('cart-table').remove();
+                            document.querySelector('h2 u').parentElement.insertAdjacentHTML('afterend', '<p>There are no items in your cart.</p>');
+                        }
+                    } else {
+                        alert('Failed to refresh cart data.');
                     }
-                } else {
-                    alert('Failed to refresh cart data.');
-                }
-            })
-            .catch(error => {
-                console.error('Error refreshing cart data:', error);
-            });
-    }
-</script>
-{% endblock %}
+                })
+                .catch(error => {
+                    console.error('Error refreshing cart data:', error);
+                });
+        }
+    </script>
+    {% endblock %}

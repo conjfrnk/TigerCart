@@ -25,7 +25,6 @@
     <li><strong>User ID:</strong> {{ username }}</li>
     
     <form method="POST" action="{{ url_for('profile') }}">
-        {{ csrf_token() }}
         <label for="venmo_handle"><strong>Venmo Username:</strong> @</label>
         {% if venmo_handle %}
             <input type="text" name="venmo_handle" id="venmo_handle" value="{{ venmo_handle }}" required>
